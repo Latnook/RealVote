@@ -125,3 +125,46 @@ def update_item(item_id, **fields):
         ExpressionAttributeValues=values,
         ConditionExpression="attribute_exists(PK)",
     )
+
+
+def record_vote(uid, item_id, choice):
+    counter = CHOICES[choice]  # KeyError on invalid choice — router turns it into 400
+    item = get_item(item_id)
+    if item is None or item["status"] != "active":
+        raise NotFound(item_id)
+    try:
+        table().put_item(
+            Item={
+                "PK": f"USER#{uid}",
+                "SK": f"VOTE#{item_id}",
+                "choice": choice,
+                "ts": int(time.time()),
+            },
+            ConditionExpression="attribute_not_exists(PK)",
+        )
+    except ClientError as e:
+        if e.response["Error"]["Code"] == "ConditionalCheckFailedException":
+            raise AlreadyVoted(item_id) from e
+        raise
+    resp = table().update_item(
+        Key={"PK": f"ITEM#{item_id}", "SK": "META"},
+        UpdateExpression=f"ADD {counter} :one",
+        ExpressionAttributeValues={":one": 1},
+        ReturnValues="ALL_NEW",
+    )
+    return _to_item_dict(resp["Attributes"])
+
+
+def get_user_votes(uid):
+    votes, kwargs = {}, {}
+    while True:
+        resp = table().query(
+            KeyConditionExpression="PK = :pk AND begins_with(SK, :v)",
+            ExpressionAttributeValues={":pk": f"USER#{uid}", ":v": "VOTE#"},
+            **kwargs,
+        )
+        for r in resp["Items"]:
+            votes[r["SK"].removeprefix("VOTE#")] = r["choice"]
+        if "LastEvaluatedKey" not in resp:
+            return votes
+        kwargs["ExclusiveStartKey"] = resp["LastEvaluatedKey"]
