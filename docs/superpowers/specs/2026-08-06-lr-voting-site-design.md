@@ -117,6 +117,12 @@ Served from S3 through CloudFront.
 
 ## 7. Infrastructure — Terraform, all of it
 
+**Region: `il-central-1` (Tel Aviv)** for all regional resources (Lambda, API Gateway,
+DynamoDB, Cognito, S3, SNS, logs) — availability verified 2026-08-06. Two exceptions live
+in `us-east-1` because AWS requires it for global services: the ACM certificate used by
+CloudFront, and the CloudWatch billing alarm. Terraform uses a second provider alias for
+those.
+
 Resources: S3 bucket (site + `/img/`), CloudFront (OAC to S3; `/api/*` → API Gateway;
 ~30s cache on `GET /api/items`), ACM cert (us-east-1) + Route53 record for
 `<subdomain>.latnook.com`, API Gateway HTTP API (with a Cognito JWT authorizer on
