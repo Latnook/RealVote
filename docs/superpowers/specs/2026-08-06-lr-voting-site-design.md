@@ -94,7 +94,7 @@ Theme tokens (all CSS variables in one theme file; freely changeable post-launch
 | `GET /api/me` | Visitor's votes (from cookie). Never cached. |
 | `POST /api/vote` | `{item_id, choice}` → 200 + fresh counts; 409 if already voted; sets cookie if absent. |
 | `POST /api/suggest` | `{text}` → 202 into pending queue. Limit ~5/day/visitor. |
-| *(admin auth)* | Amazon **Cognito** user pool with one admin user: username + password + **mandatory TOTP MFA**. The admin page signs in via the Cognito SDK and sends the resulting JWT as an `Authorization` header; an **API Gateway JWT authorizer** verifies it before requests reach the Lambda — no self-written auth code. Lockout/rate-limiting handled by Cognito. |
+| *(admin auth)* | Amazon **Cognito** user pool with one admin user: username + password (MFA off by default; can be enabled in Cognito later without code changes). The admin page signs in via the Cognito SDK and sends the resulting JWT as an `Authorization` header; an **API Gateway JWT authorizer** verifies it before requests reach the Lambda — no self-written auth code. Lockout/rate-limiting handled by Cognito. |
 | `GET /api/admin/suggestions` | Pending queue. |
 | `POST /api/admin/suggestions/<id>/approve` | Creates item (name editable at approval; optional image). |
 | `POST /api/admin/suggestions/<id>/reject` | Rejects. |
@@ -121,7 +121,7 @@ Resources: S3 bucket (site + `/img/`), CloudFront (OAC to S3; `/api/*` → API G
 ~30s cache on `GET /api/items`), ACM cert (us-east-1) + Route53 record for
 `<subdomain>.latnook.com`, API Gateway HTTP API (with a Cognito JWT authorizer on
 `/api/admin/*`), Python Lambda, DynamoDB table (on-demand), **Cognito user pool** (single
-admin user, TOTP MFA required), CloudWatch logs + 5xx alarm, **billing alarm** (~$10/mo
+admin user), CloudWatch logs + 5xx alarm, **billing alarm** (~$10/mo
 threshold) → SNS email, IAM roles (least privilege). Secrets Manager is no longer needed —
 Cognito holds the only credential.
 
@@ -150,9 +150,9 @@ Verified locally: voting (all three inputs), reveal, dedup, my-votes, suggest fl
 
 ## 10. Security summary
 
-No credentials in git or code — the only credential lives in Cognito (username + password +
-mandatory TOTP MFA), and admin API routes are verified by API Gateway before reaching our
-code; anonymous visitors (no PII, no accounts); HttpOnly/Secure visitor cookie;
+No credentials in git or code — the only credential lives in Cognito (username + password;
+MFA available as a later toggle), and admin API routes are verified by API Gateway before
+reaching our code; anonymous visitors (no PII, no accounts); HttpOnly/Secure visitor cookie;
 least-privilege IAM; HTTPS-only via CloudFront; S3 buckets private (OAC);
 no third-party trackers.
 
