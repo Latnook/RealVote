@@ -15,3 +15,8 @@ deploy.env
 
 # Editor/OS noise
 .DS_Store
+
+# Python bytecode and virtual environment
+__pycache__/
+*.pyc
+.venv/
