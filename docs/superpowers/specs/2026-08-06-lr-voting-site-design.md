@@ -77,7 +77,7 @@ Theme tokens (all CSS variables in one theme file; freely changeable post-launch
 |---|---|---|
 | Item | `ITEM#<id>` | name, image key (optional; emoji fallback), status `active/archived`, `votes_left`, `votes_right`, `votes_neutral`, created_at |
 | Vote | `USER#<uid>` / `VOTE#<item_id>` | choice `left/right/neutral`, timestamp |
-| Suggestion | `SUGG#<ulid>` | text, status `pending/approved/rejected`, uid, timestamp |
+| Suggestion | `SUGG` / `<time-prefixed id>` | text, status `pending/approved/rejected`, uid, timestamp (single partition; SK time-prefix gives oldest-first ordering) |
 
 - Vote counting: atomic `ADD` increments on the item record — correct under any concurrency.
 - Double-vote prevention: vote insert is a **conditional put** (`attribute_not_exists`) —
