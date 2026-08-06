@@ -1,0 +1,159 @@
+import { getItems, getMe, vote } from "./api.js";
+
+const state = {
+  items: [],            // all active items (id -> object also in byId)
+  byId: new Map(),
+  votes: {},            // item_id -> choice (mine, server-truth)
+  queue: [],            // unvoted item ids, shuffled
+  history: [],          // answered/viewed ids this session (for back)
+  current: null,        // item id on screen
+  revealed: false,
+  viewingBack: false,
+};
+
+const emptyCbs = [], votesCbs = [];
+export const onDeckEmpty = (cb) => emptyCbs.push(cb);
+export const onVotesChanged = (cb) => votesCbs.push(cb);
+export const isRevealed = () => state.revealed;
+export const currentItem = () => (state.current ? state.byId.get(state.current) : null);
+export const getState = () => state;
+
+const area = () => document.getElementById("card-area");
+const isLocal = ["localhost", "127.0.0.1"].includes(location.hostname);
+
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+export async function initDeck() {
+  const [itemsResp, meResp] = await Promise.all([getItems(), getMe()]);
+  state.items = itemsResp.body.items || [];
+  state.byId = new Map(state.items.map((i) => [i.id, i]));
+  state.votes = meResp.body.votes || {};
+  state.queue = shuffle(state.items.filter((i) => !(i.id in state.votes)).map((i) => i.id));
+  showNextCard();
+  if (isLocal && new URLSearchParams(location.search).get("e2e") === "vote") {
+    castVote("right");
+  }
+}
+
+function updateChrome() {
+  const total = state.items.length;
+  const done = Object.keys(state.votes).length;
+  const pos = Math.min(done + 1, total);
+  document.getElementById("counter").textContent =
+    `${String(pos).padStart(2, "0")}/${String(total).padStart(2, "0")}`;
+  document.getElementById("ghost").textContent = String(pos).padStart(2, "0");
+}
+
+function mediaHTML(item) {
+  if (item.image_key) {
+    return `<img src="/${item.image_key}" alt="${item.name}">`;
+  }
+  return item.emoji || "🤔";
+}
+
+function cardHTML(item) {
+  return `
+    <article class="card" id="card" data-item="${item.id}">
+      <h2>${item.name}<span class="dot">.</span></h2>
+      <div class="media">${mediaHTML(item)}</div>
+      <div class="hint">→ ימני · ← שמאלני · ↓ ניטרלי</div>
+      <div class="reveal hidden"></div>
+    </article>`;
+}
+
+function showNextCard() {
+  state.revealed = false;
+  state.viewingBack = false;
+  if (state.queue.length === 0) {
+    state.current = null;
+    emptyCbs.forEach((cb) => cb());
+    return;
+  }
+  state.current = state.queue[0];
+  updateChrome();
+  area().innerHTML = cardHTML(state.byId.get(state.current));
+}
+
+function revealHTML(item, myChoice) {
+  const l = item.votes_left, r = item.votes_right, n = item.votes_neutral;
+  const total = l + r + n;
+  const lr = l + r;
+  const pctL = lr ? Math.round((100 * l) / lr) : 50;
+  const pctR = lr ? 100 - pctL : 50;
+  const mark = (side) => (myChoice === side ? " ✓ הצבעת" : "");
+  return `
+    <div class="bar"><div class="bar-left"></div><div class="bar-right"></div></div>
+    <div class="stats">
+      <span class="left-side">שמאלני ${pctL}% · ${l.toLocaleString("he")} קולות${mark("left")}</span>
+      <span class="right-side">${mark("right")}ימני ${pctR}% · ${r.toLocaleString("he")} קולות</span>
+    </div>
+    <div class="neutral-count">🤷 ${n.toLocaleString("he")} ניטרלי${mark("neutral")}</div>
+    <div class="reveal-actions">
+      <button class="primary" id="btn-next">הבא</button>
+      <button class="secondary" id="btn-back">חזרה</button>
+    </div>`;
+}
+
+function renderReveal(item, myChoice) {
+  state.revealed = true;
+  const card = document.getElementById("card");
+  card.querySelector(".hint").classList.add("hidden");
+  const reveal = card.querySelector(".reveal");
+  reveal.innerHTML = revealHTML(item, myChoice);
+  reveal.classList.remove("hidden");
+  const l = item.votes_left, r = item.votes_right;
+  const lr = l + r;
+  const pctL = lr ? Math.round((100 * l) / lr) : 50;
+  requestAnimationFrame(() =>
+    requestAnimationFrame(() => {
+      reveal.querySelector(".bar-left").style.width = `${pctL}%`;
+      reveal.querySelector(".bar-right").style.width = `${100 - pctL}%`;
+    })
+  );
+  document.getElementById("btn-next").addEventListener("click", next);
+  document.getElementById("btn-back").addEventListener("click", back);
+}
+
+export async function castVote(choice) {
+  if (state.revealed || !state.current) return;
+  const id = state.current;
+  const { status, body } = await vote(id, choice);
+  if (status === 200) {
+    state.byId.set(id, { ...state.byId.get(id), ...body.item });
+    state.votes[id] = choice;
+    state.queue = state.queue.filter((q) => q !== id);
+    state.history.push(id);
+    votesCbs.forEach((cb) => cb());
+    renderReveal(state.byId.get(id), choice);
+  } else if (status === 409) {
+    state.votes[id] = state.votes[id] || "neutral";
+    state.queue = state.queue.filter((q) => q !== id);
+    showNextCard();
+  } else {
+    window.showToast?.("משהו השתבש, נסו שוב");
+  }
+}
+
+export function next() {
+  if (!state.revealed) return;
+  showNextCard();
+}
+
+export function back() {
+  const prevIdx = state.history.indexOf(state.current);
+  const target =
+    state.current && state.viewingBack && prevIdx > 0
+      ? state.history[prevIdx - 1]
+      : state.history[state.history.length - 1];
+  if (!target || target === state.current) return;
+  state.current = target;
+  state.viewingBack = true;
+  area().innerHTML = cardHTML(state.byId.get(target));
+  renderReveal(state.byId.get(target), state.votes[target]);
+}

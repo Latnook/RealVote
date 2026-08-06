@@ -1,8 +1,13 @@
-// Placeholder boot — Task 2 replaces this with the real deck wiring.
-const area = document.getElementById("card-area");
-area.innerHTML = `
-  <article class="card" id="card">
-    <h2>חתונת שישי בצהריים<span class="dot">.</span></h2>
-    <div class="media">💍</div>
-    <div class="hint">→ ימני · ← שמאלני · ↓ ניטרלי</div>
-  </article>`;
+import { initDeck, castVote } from "./deck.js";
+
+for (const [id, choice] of [
+  ["btn-right", "right"],
+  ["btn-left", "left"],
+  ["btn-neutral", "neutral"],
+  ["edge-right", "right"],
+  ["edge-left", "left"],
+]) {
+  document.getElementById(id).addEventListener("click", () => castVote(choice));
+}
+
+initDeck();
