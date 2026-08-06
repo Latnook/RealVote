@@ -49,3 +49,11 @@ def test_get_user_votes(item):
     db.record_vote("u9", "magnets", "right")
     assert db.get_user_votes("u9") == {item: "left", "magnets": "right"}
     assert db.get_user_votes("stranger") == {}
+
+
+def test_rejected_vote_leaves_no_record(fresh_table):
+    db.create_item("old", "ישן", "🗿")
+    db.update_item("old", status="archived")
+    with pytest.raises(db.NotFound):
+        db.record_vote("u1", "old", "left")
+    assert db.get_user_votes("u1") == {}

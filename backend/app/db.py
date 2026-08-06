@@ -89,8 +89,10 @@ def create_item(item_id, name, emoji, image_key=None):
     table().put_item(Item=record, ConditionExpression="attribute_not_exists(PK)")
 
 
-def get_item(item_id):
-    resp = table().get_item(Key={"PK": f"ITEM#{item_id}", "SK": "META"})
+def get_item(item_id, consistent=False):
+    resp = table().get_item(
+        Key={"PK": f"ITEM#{item_id}", "SK": "META"}, ConsistentRead=consistent
+    )
     record = resp.get("Item")
     return _to_item_dict(record) if record else None
 
@@ -128,31 +130,54 @@ def update_item(item_id, **fields):
 
 
 def record_vote(uid, item_id, choice):
-    counter = CHOICES[choice]  # KeyError on invalid choice — router turns it into 400
-    item = get_item(item_id)
-    if item is None or item["status"] != "active":
-        raise NotFound(item_id)
-    try:
-        table().put_item(
-            Item={
-                "PK": f"USER#{uid}",
-                "SK": f"VOTE#{item_id}",
-                "choice": choice,
-                "ts": int(time.time()),
-            },
-            ConditionExpression="attribute_not_exists(PK)",
+    counter = CHOICES[choice]  # KeyError on invalid choice, before any write
+    kwargs = {}
+    if os.environ.get("DDB_ENDPOINT"):
+        kwargs.update(
+            endpoint_url=os.environ["DDB_ENDPOINT"],
+            region_name="us-east-1",
+            aws_access_key_id="local",
+            aws_secret_access_key="local",
         )
-    except ClientError as e:
-        if e.response["Error"]["Code"] == "ConditionalCheckFailedException":
+    client = boto3.client("dynamodb", **kwargs)
+    name = os.environ["TABLE_NAME"]
+    try:
+        client.transact_write_items(
+            TransactItems=[
+                {"Put": {
+                    "TableName": name,
+                    "Item": {
+                        "PK": {"S": f"USER#{uid}"},
+                        "SK": {"S": f"VOTE#{item_id}"},
+                        "choice": {"S": choice},
+                        "ts": {"N": str(int(time.time()))},
+                    },
+                    "ConditionExpression": "attribute_not_exists(PK)",
+                }},
+                {"Update": {
+                    "TableName": name,
+                    "Key": {"PK": {"S": f"ITEM#{item_id}"}, "SK": {"S": "META"}},
+                    "UpdateExpression": "ADD #c :one",
+                    "ConditionExpression": "attribute_exists(PK) AND #s = :active",
+                    "ExpressionAttributeNames": {"#c": counter, "#s": "status"},
+                    "ExpressionAttributeValues": {
+                        ":one": {"N": "1"},
+                        ":active": {"S": "active"},
+                    },
+                }},
+            ]
+        )
+    except client.exceptions.TransactionCanceledException as e:
+        codes = [r.get("Code") for r in e.response.get("CancellationReasons", [])]
+        if codes and codes[0] == "ConditionalCheckFailed":
             raise AlreadyVoted(item_id) from e
+        if len(codes) > 1 and codes[1] == "ConditionalCheckFailed":
+            raise NotFound(item_id) from e
         raise
-    resp = table().update_item(
-        Key={"PK": f"ITEM#{item_id}", "SK": "META"},
-        UpdateExpression=f"ADD {counter} :one",
-        ExpressionAttributeValues={":one": 1},
-        ReturnValues="ALL_NEW",
-    )
-    return _to_item_dict(resp["Attributes"])
+    item = get_item(item_id, consistent=True)
+    if item is None:
+        raise NotFound(item_id)
+    return item
 
 
 def get_user_votes(uid):
