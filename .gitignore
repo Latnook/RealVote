@@ -1,0 +1,17 @@
+# Brainstorming visual companion session files
+.superpowers/
+
+# Terraform (will be populated once infra code exists)
+*.tfstate
+*.tfstate.*
+.terraform/
+*.tfvars
+!*.tfvars.example
+
+# Secrets & local env
+*.pem
+.env
+deploy.env
+
+# Editor/OS noise
+.DS_Store
