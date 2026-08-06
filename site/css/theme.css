@@ -1,0 +1,27 @@
+/* K² "Swiss gradient slate" — the only file you edit to retheme the site. */
+:root {
+  --bg: #23262B;
+  --ink: #F2F3F5;
+  --muted: #8B9099;
+  --surface: #2E3238;
+  --right-a: #3730A3;  /* ימני gradient start (deep indigo) */
+  --right-b: #0E7490;  /* ימני gradient end (deep cyan)    */
+  --left-a: #B91C1C;   /* שמאלני gradient start (crimson)  */
+  --left-b: #C2410C;   /* שמאלני gradient end (burnt orange) */
+  --rule-w: 2px;
+  --drift-period: 7s;
+  --font: "Helvetica Neue", Helvetica, Arial, "Noto Sans Hebrew", "Segoe UI", sans-serif;
+}
+
+@keyframes drift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+.drift {
+  background-size: 250% 250%;
+  animation: drift var(--drift-period) ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .drift { animation: none; }
+}
