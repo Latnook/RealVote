@@ -67,3 +67,22 @@ def test_suggest_and_rate_limit(fresh_table):
 
 def test_unknown_route_404(fresh_table):
     assert call(apigw_event("GET", "/api/nope"))[0]["statusCode"] == 404
+
+
+def test_early_400s_still_set_cookie(fresh_table):
+    bad = apigw_event("POST", "/api/vote")
+    bad["body"] = "{oops"
+    resp = lambda_handler(bad, None)
+    assert resp["statusCode"] == 400
+    assert resp["cookies"][0].startswith("lr_uid=")
+    resp2 = lambda_handler(apigw_event("POST", "/api/suggest", body={"text": "  "}), None)
+    assert resp2["statusCode"] == 400
+    assert resp2["cookies"][0].startswith("lr_uid=")
+
+
+def test_allow_admin_ignored_inside_lambda(fresh_table, monkeypatch):
+    from app.handler import is_admin
+    monkeypatch.setenv("ALLOW_ADMIN", "1")
+    assert is_admin(apigw_event("GET", "/api/admin/suggestions")) is True
+    monkeypatch.setenv("AWS_LAMBDA_FUNCTION_NAME", "lr-api")
+    assert is_admin(apigw_event("GET", "/api/admin/suggestions")) is False

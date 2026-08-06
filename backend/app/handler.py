@@ -4,7 +4,7 @@ from app import db, http
 
 
 def is_admin(event):
-    if os.environ.get("ALLOW_ADMIN") == "1":
+    if os.environ.get("ALLOW_ADMIN") == "1" and not os.environ.get("AWS_LAMBDA_FUNCTION_NAME"):
         return True
     return "jwt" in (event.get("requestContext", {}).get("authorizer") or {})
 
@@ -31,11 +31,11 @@ def get_me(event):
 
 
 def post_vote(event):
-    body = http.read_json(event)
-    if body is None or not isinstance(body.get("item_id"), str):
-        return http.response(400, {"error": "bad_request"})
     uid, cookie = _uid(event)
     cookies = [cookie] if cookie else None
+    body = http.read_json(event)
+    if body is None or not isinstance(body.get("item_id"), str):
+        return http.response(400, {"error": "bad_request"}, cookies=cookies)
     try:
         item = db.record_vote(uid, body["item_id"], body.get("choice"))
     except KeyError:
@@ -49,12 +49,12 @@ def post_vote(event):
 
 
 def post_suggest(event):
+    uid, cookie = _uid(event)
+    cookies = [cookie] if cookie else None
     body = http.read_json(event)
     text = (body or {}).get("text", "")
     if not isinstance(text, str) or not text.strip():
-        return http.response(400, {"error": "empty_text"})
-    uid, cookie = _uid(event)
-    cookies = [cookie] if cookie else None
+        return http.response(400, {"error": "empty_text"}, cookies=cookies)
     try:
         db.add_suggestion(uid, text)
     except db.RateLimited:
