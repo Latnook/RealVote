@@ -1,5 +1,13 @@
 import { getItems, getMe, vote } from "./api.js";
 
+const esc = (s) =>
+  String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+
 const state = {
   items: [],            // all active items (id -> object also in byId)
   byId: new Map(),
@@ -12,6 +20,7 @@ const state = {
 };
 
 const emptyCbs = [], votesCbs = [];
+let submitting = false;
 export const onDeckEmpty = (cb) => emptyCbs.push(cb);
 export const onVotesChanged = (cb) => votesCbs.push(cb);
 export const isRevealed = () => state.revealed;
@@ -52,15 +61,15 @@ function updateChrome() {
 
 function mediaHTML(item) {
   if (item.image_key) {
-    return `<img src="/${item.image_key}" alt="${item.name}">`;
+    return `<img src="/${esc(item.image_key)}" alt="${esc(item.name)}">`;
   }
-  return item.emoji || "🤔";
+  return esc(item.emoji) || "🤔";
 }
 
 function cardHTML(item) {
   return `
-    <article class="card" id="card" data-item="${item.id}">
-      <h2>${item.name}<span class="dot">.</span></h2>
+    <article class="card" id="card" data-item="${esc(item.id)}">
+      <h2>${esc(item.name)}<span class="dot">.</span></h2>
       <div class="media">${mediaHTML(item)}</div>
       <div class="hint">→ ימני · ← שמאלני · ↓ ניטרלי</div>
       <div class="reveal hidden"></div>
@@ -82,7 +91,6 @@ function showNextCard() {
 
 function revealHTML(item, myChoice) {
   const l = item.votes_left, r = item.votes_right, n = item.votes_neutral;
-  const total = l + r + n;
   const lr = l + r;
   const pctL = lr ? Math.round((100 * l) / lr) : 50;
   const pctR = lr ? 100 - pctL : 50;
@@ -121,22 +129,29 @@ function renderReveal(item, myChoice) {
 }
 
 export async function castVote(choice) {
-  if (state.revealed || !state.current) return;
+  if (submitting || state.revealed || !state.current) return;
+  submitting = true;
   const id = state.current;
-  const { status, body } = await vote(id, choice);
-  if (status === 200) {
-    state.byId.set(id, { ...state.byId.get(id), ...body.item });
-    state.votes[id] = choice;
-    state.queue = state.queue.filter((q) => q !== id);
-    state.history.push(id);
-    votesCbs.forEach((cb) => cb());
-    renderReveal(state.byId.get(id), choice);
-  } else if (status === 409) {
-    state.votes[id] = state.votes[id] || "neutral";
-    state.queue = state.queue.filter((q) => q !== id);
-    showNextCard();
-  } else {
-    window.showToast?.("משהו השתבש, נסו שוב");
+  try {
+    const { status, body } = await vote(id, choice);
+    if (id !== state.current) return; // stale response — state moved on
+    if (status === 200) {
+      state.byId.set(id, { ...state.byId.get(id), ...body.item });
+      state.votes[id] = choice;
+      state.queue = state.queue.filter((q) => q !== id);
+      state.history.push(id);
+      votesCbs.forEach((cb) => cb());
+      renderReveal(state.byId.get(id), choice);
+    } else if (status === 409) {
+      state.votes[id] = state.votes[id] || "neutral";
+      state.queue = state.queue.filter((q) => q !== id);
+      votesCbs.forEach((cb) => cb());
+      showNextCard();
+    } else {
+      window.showToast?.("משהו השתבש, נסו שוב");
+    }
+  } finally {
+    submitting = false;
   }
 }
 
@@ -146,12 +161,9 @@ export function next() {
 }
 
 export function back() {
-  const prevIdx = state.history.indexOf(state.current);
-  const target =
-    state.current && state.viewingBack && prevIdx > 0
-      ? state.history[prevIdx - 1]
-      : state.history[state.history.length - 1];
-  if (!target || target === state.current) return;
+  const idx = state.history.indexOf(state.current);
+  if (idx <= 0) return;
+  const target = state.history[idx - 1];
   state.current = target;
   state.viewingBack = true;
   area().innerHTML = cardHTML(state.byId.get(target));
