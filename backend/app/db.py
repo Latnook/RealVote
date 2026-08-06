@@ -193,3 +193,65 @@ def get_user_votes(uid):
         if "LastEvaluatedKey" not in resp:
             return votes
         kwargs["ExclusiveStartKey"] = resp["LastEvaluatedKey"]
+
+
+SUGGEST_DAILY_CAP = 5
+
+
+def add_suggestion(uid, text):
+    day = time.strftime("%Y%m%d", time.gmtime())
+    resp = table().update_item(
+        Key={"PK": f"RATE#{uid}", "SK": f"SUGGEST#{day}"},
+        UpdateExpression="ADD n :one",
+        ExpressionAttributeValues={":one": 1},
+        ReturnValues="ALL_NEW",
+    )
+    if int(resp["Attributes"]["n"]) > SUGGEST_DAILY_CAP:
+        raise RateLimited(uid)
+    sid = f"{time.time_ns():020d}-{uuid.uuid4().hex[:8]}"
+    table().put_item(
+        Item={
+            "PK": "SUGG",
+            "SK": sid,
+            "text": text.strip()[:120],
+            "uid": uid,
+            "status": "pending",
+            "ts": int(time.time()),
+        }
+    )
+    return sid
+
+
+def list_suggestions(status):
+    out, kwargs = [], {}
+    while True:
+        resp = table().query(
+            KeyConditionExpression="PK = :pk",
+            FilterExpression="#s = :status",
+            ExpressionAttributeNames={"#s": "status"},
+            ExpressionAttributeValues={":pk": "SUGG", ":status": status},
+            **kwargs,
+        )
+        out.extend(
+            {"sid": r["SK"], "text": r["text"], "uid": r["uid"],
+             "status": r["status"], "ts": int(r["ts"])}
+            for r in resp["Items"]
+        )
+        if "LastEvaluatedKey" not in resp:
+            return out  # SK is time-prefixed → query order is oldest-first already
+        kwargs["ExclusiveStartKey"] = resp["LastEvaluatedKey"]
+
+
+def set_suggestion_status(sid, status):
+    try:
+        table().update_item(
+            Key={"PK": "SUGG", "SK": sid},
+            UpdateExpression="SET #s = :status",
+            ExpressionAttributeNames={"#s": "status"},
+            ExpressionAttributeValues={":status": status},
+            ConditionExpression="attribute_exists(PK)",
+        )
+    except ClientError as e:
+        if e.response["Error"]["Code"] == "ConditionalCheckFailedException":
+            raise NotFound(sid) from e
+        raise
