@@ -1,3 +1,4 @@
+import functools
 import os
 import time
 import uuid
@@ -20,7 +21,7 @@ class RateLimited(Exception):
     pass
 
 
-def _resource():
+def _conn_kwargs():
     kwargs = {}
     if os.environ.get("DDB_ENDPOINT"):
         kwargs.update(
@@ -29,7 +30,17 @@ def _resource():
             aws_access_key_id="local",
             aws_secret_access_key="local",
         )
-    return boto3.resource("dynamodb", **kwargs)
+    return kwargs
+
+
+@functools.lru_cache(maxsize=1)
+def _resource():
+    return boto3.resource("dynamodb", **_conn_kwargs())
+
+
+@functools.lru_cache(maxsize=1)
+def _client():
+    return boto3.client("dynamodb", **_conn_kwargs())
 
 
 def table():
@@ -131,15 +142,7 @@ def update_item(item_id, **fields):
 
 def record_vote(uid, item_id, choice):
     counter = CHOICES[choice]  # KeyError on invalid choice, before any write
-    kwargs = {}
-    if os.environ.get("DDB_ENDPOINT"):
-        kwargs.update(
-            endpoint_url=os.environ["DDB_ENDPOINT"],
-            region_name="us-east-1",
-            aws_access_key_id="local",
-            aws_secret_access_key="local",
-        )
-    client = boto3.client("dynamodb", **kwargs)
+    client = _client()
     name = os.environ["TABLE_NAME"]
     try:
         client.transact_write_items(

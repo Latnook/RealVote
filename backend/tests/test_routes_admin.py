@@ -71,3 +71,14 @@ def test_duplicate_item_id_409(fresh_table):
     resp, _ = call(apigw_event("POST", "/api/admin/items", admin=True,
                                body={"item_id": "a", "name": "ב", "emoji": "🅱️"}))
     assert resp["statusCode"] == 409
+
+
+def test_approve_existing_item_409_reverts_suggestion_to_pending(fresh_table):
+    db.create_item("a", "א", "🅰️")
+    sid = db.add_suggestion("u1", "עוד א")
+    resp, _ = call(apigw_event("POST", f"/api/admin/suggestions/{sid}/approve", admin=True,
+                               body={"item_id": "a", "name": "א2", "emoji": "🅰️"}))
+    assert resp["statusCode"] == 409
+    _, body = call(apigw_event("GET", "/api/admin/suggestions", admin=True))
+    pending = {s["sid"]: s["status"] for s in body["suggestions"]}
+    assert pending.get(sid) == "pending"

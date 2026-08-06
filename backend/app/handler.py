@@ -1,6 +1,10 @@
 import os
+import re
+import traceback
 
 from app import db, http
+
+_UID_RE = re.compile(r"^[0-9a-f]{32}$")
 
 
 def is_admin(event):
@@ -12,7 +16,7 @@ def is_admin(event):
 def _uid(event):
     """Returns (uid, new_cookie_or_None)."""
     uid = http.get_cookie(event, "lr_uid")
-    if uid:
+    if uid and _UID_RE.match(uid):
         return uid, None
     uid = http.new_uid()
     return uid, http.uid_set_cookie(uid)
@@ -36,10 +40,11 @@ def post_vote(event):
     body = http.read_json(event)
     if body is None or not isinstance(body.get("item_id"), str):
         return http.response(400, {"error": "bad_request"}, cookies=cookies)
+    choice = body.get("choice")
+    if not isinstance(choice, str) or choice not in db.CHOICES:
+        return http.response(400, {"error": "bad_choice"}, cookies=cookies)
     try:
         item = db.record_vote(uid, body["item_id"], body.get("choice"))
-    except KeyError:
-        return http.response(400, {"error": "bad_choice"}, cookies=cookies)
     except db.NotFound:
         return http.response(404, {"error": "unknown_item"}, cookies=cookies)
     except db.AlreadyVoted:
@@ -70,7 +75,7 @@ PUBLIC_ROUTES = {
 }
 
 
-def lambda_handler(event, context):
+def _route(event):
     method = event["requestContext"]["http"]["method"]
     path = event["rawPath"].rstrip("/") or "/"
     route = PUBLIC_ROUTES.get((method, path))
@@ -80,3 +85,11 @@ def lambda_handler(event, context):
         from app import admin_routes  # imported lazily; added in Task 7
         return admin_routes.dispatch(event, method, path, is_admin(event))
     return http.response(404, {"error": "not_found"})
+
+
+def lambda_handler(event, context):
+    try:
+        return _route(event)
+    except Exception:
+        traceback.print_exc()  # goes to CloudWatch
+        return http.response(500, {"error": "internal"})

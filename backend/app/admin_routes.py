@@ -38,6 +38,7 @@ def approve(event, sid):
         db.create_item(item_id, name, body.get("emoji", ""))
     except ClientError as e:
         if e.response["Error"]["Code"] == "ConditionalCheckFailedException":
+            db.set_suggestion_status(sid, "pending")
             return http.response(409, {"error": "item_exists"})
         raise
     return http.response(200, {"ok": True})

@@ -54,6 +54,29 @@ def test_vote_validation_errors(fresh_table):
     assert call(bad)[0]["statusCode"] == 400
 
 
+def test_vote_bad_choice_type_400(fresh_table):
+    seeded(fresh_table)
+    resp, _ = call(apigw_event("POST", "/api/vote",
+                               body={"item_id": "keter", "choice": ["left"]}))
+    assert resp["statusCode"] == 400
+
+
+def test_vote_malformed_cookie_treated_as_absent(fresh_table):
+    seeded(fresh_table)
+    huge_uid = "x" * 3000
+    resp, body = call(apigw_event("POST", "/api/vote",
+                                  cookies=["lr_uid=" + huge_uid],
+                                  body={"item_id": "keter", "choice": "left"}))
+    assert resp["statusCode"] == 200
+    assert "cookies" in resp and resp["cookies"]
+    new_uid_cookie = resp["cookies"][0]
+    assert new_uid_cookie.startswith("lr_uid=")
+    new_uid = new_uid_cookie.split(";")[0].split("=", 1)[1]
+    assert new_uid != huge_uid
+    resp2, body2 = call(apigw_event("GET", "/api/me", cookies=[new_uid_cookie.split(";")[0]]))
+    assert body2["votes"] == {"keter": "left"}
+
+
 def test_suggest_and_rate_limit(fresh_table):
     resp, _ = call(apigw_event("POST", "/api/suggest", body={"text": "פיצה עם תירס"}))
     assert resp["statusCode"] == 202
