@@ -1,4 +1,5 @@
 import { initDeck, castVote } from "./deck.js";
+import { initGestures } from "./gestures.js";
 
 for (const [id, choice] of [
   ["btn-right", "right"],
@@ -10,4 +11,5 @@ for (const [id, choice] of [
   document.getElementById(id).addEventListener("click", () => castVote(choice));
 }
 
+initGestures();
 initDeck();
