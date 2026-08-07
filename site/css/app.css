@@ -188,6 +188,8 @@ body {
 @media (min-width: 900px) {
   #vote-bar { display: none; }
   body.has-edges #stage { margin: 0 110px; }
+  body.has-edges .topbar { margin: 0 110px; }
+  body.has-edges .rule { margin: 10px 126px 0; }
   .edge {
     position: fixed; top: 0; bottom: 34px; width: 110px; z-index: 20;
     border: none; cursor: pointer; color: #fff;

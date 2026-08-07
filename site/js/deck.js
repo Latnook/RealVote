@@ -99,8 +99,8 @@ function revealHTML(item, myChoice) {
   return `
     <div class="bar"><div class="bar-left"></div><div class="bar-right"></div></div>
     <div class="stats">
+      <span class="right-side">ימני ${pctR}% · ${r.toLocaleString("he")} קולות${mark("right")}</span>
       <span class="left-side">שמאלני ${pctL}% · ${l.toLocaleString("he")} קולות${mark("left")}</span>
-      <span class="right-side">${mark("right")}ימני ${pctR}% · ${r.toLocaleString("he")} קולות</span>
     </div>
     <div class="neutral-count">🤷 ${n.toLocaleString("he")} ניטרלי${mark("neutral")}</div>
     <div class="reveal-actions">
