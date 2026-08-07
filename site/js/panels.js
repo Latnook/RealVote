@@ -73,8 +73,8 @@ function openSuggest() {
       <h2>מה עוד שכחנו?</h2>
       <textarea id="suggest-text" maxlength="120" placeholder="לדוגמה: פיצה עם תירס"></textarea>
       <div class="actions">
-        <button class="primary" id="suggest-send" style="flex:1; background:var(--ink); color:var(--bg); border:2px solid var(--ink); font-weight:900; padding:10px; cursor:pointer;">שליחה</button>
-        <button class="secondary" id="suggest-cancel" style="background:none; color:var(--muted); border:2px solid var(--muted); padding:10px 16px; cursor:pointer;">ביטול</button>
+        <button class="primary" id="suggest-send">שליחה</button>
+        <button class="secondary" id="suggest-cancel">ביטול</button>
       </div>
     </div>`;
   d.classList.remove("hidden");

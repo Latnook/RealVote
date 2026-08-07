@@ -173,6 +173,17 @@ body {
   font-size: 15px; font-weight: 900; padding: 12px 22px; cursor: pointer; font-family: var(--font);
 }
 
+.dialog .actions .primary {
+  flex: 1; background: var(--ink); color: var(--bg);
+  border: var(--rule-w) solid var(--ink);
+  font-family: var(--font); font-size: 15px; font-weight: 900; padding: 10px; cursor: pointer;
+}
+.dialog .actions .secondary {
+  background: none; color: var(--muted);
+  border: var(--rule-w) solid var(--muted);
+  font-family: var(--font); font-size: 14px; font-weight: 700; padding: 10px 16px; cursor: pointer;
+}
+
 /* ---- desktop: edge vote zones ---- */
 @media (min-width: 900px) {
   #vote-bar { display: none; }

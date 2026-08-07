@@ -44,6 +44,7 @@ export async function initDeck() {
   state.byId = new Map(state.items.map((i) => [i.id, i]));
   state.votes = meResp.body.votes || {};
   state.queue = shuffle(state.items.filter((i) => !(i.id in state.votes)).map((i) => i.id));
+  votesCbs.forEach((cb) => cb());
   showNextCard();
   if (isLocal && new URLSearchParams(location.search).get("e2e") === "vote") {
     castVote("right");
