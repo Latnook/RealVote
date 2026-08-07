@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>בעיניי · ניהול</title>
+  <meta name="robots" content="noindex">
+  <link rel="stylesheet" href="/css/theme.css">
+  <link rel="stylesheet" href="/admin/admin.css">
+</head>
+<body>
+  <header class="topbar">
+    <span class="wordmark">בעיניי<span class="dot">.</span> ניהול</span>
+    <span id="mode-badge" class="badge"></span>
+  </header>
+  <div class="rule"></div>
+
+  <!-- COGNITO-LOGIN-SLOT: Plan 3 renders the Cognito login form here when config.json exists -->
+  <section id="login" class="hidden">
+    <p>נדרשת התחברות — יוגדר בפריסה (Cognito).</p>
+  </section>
+
+  <main id="admin-main" class="hidden">
+    <section>
+      <h2>הצעות ממתינות</h2>
+      <div id="queue"></div>
+    </section>
+    <section>
+      <h2>פריט חדש</h2>
+      <form id="create-form">
+        <input id="c-id" placeholder="item-id (a-z, 0-9, -)" pattern="[a-z0-9-]{1,64}" required>
+        <input id="c-name" placeholder="שם בעברית" required>
+        <input id="c-emoji" placeholder="אימוג׳י" size="4">
+        <label><input type="checkbox" id="c-image"> עם תמונה</label>
+        <input type="file" id="c-file" accept="image/*" class="hidden">
+        <button type="submit">יצירה</button>
+      </form>
+    </section>
+    <section>
+      <h2>פריטים</h2>
+      <div id="items"></div>
+    </section>
+  </main>
+
+  <div id="toast" class="toast hidden" role="status"></div>
+  <script type="module" src="/admin/admin.js"></script>
+</body>
+</html>
