@@ -76,7 +76,7 @@ async function loadQueue() {
 /* ---- items ---- */
 async function loadItems() {
   const { status, body } = await api("/api/items");
-  if (status !== 200) return;
+  if (status !== 200) return toast(`שגיאה בטעינת הפריטים (${status})`);
   $("items").innerHTML = (body.items || [])
     .map(
       (i) => `<div class="row" data-id="${i.id}">
@@ -140,8 +140,12 @@ function initCreateForm() {
         body: blob,
       });
       toast(up.ok ? "נוצר + תמונה הועלתה ✓" : "נוצר, אך העלאת התמונה נכשלה");
+    } else if (want_image && !body.upload_url) {
+      toast("נוצר (אין דלי תמונות מקומי)");
+    } else if (want_image) {
+      toast("נוצר — עדיין ללא תמונה");
     } else {
-      toast(want_image && !body.upload_url ? "נוצר (אין דלי תמונות מקומי)" : "נוצר ✓");
+      toast("נוצר ✓");
     }
     $("create-form").reset();
     $("c-file").classList.add("hidden");
