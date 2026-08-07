@@ -15,6 +15,7 @@ export function initGestures() {
       }
       return;
     }
+    if (["ArrowRight", "ArrowLeft", "ArrowDown"].includes(e.key)) e.preventDefault();
     if (e.key === "ArrowRight") castVote("right");
     else if (e.key === "ArrowLeft") castVote("left");
     else if (e.key === "ArrowDown") castVote("neutral");
@@ -25,6 +26,7 @@ export function initGestures() {
   let drag = null;
 
   area.addEventListener("pointerdown", (e) => {
+    if (drag) return;
     const card = e.target.closest("#card");
     if (!card || isRevealed()) return;
     drag = { card, x0: e.clientX, y0: e.clientY, id: e.pointerId };
