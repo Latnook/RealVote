@@ -1,5 +1,6 @@
 import { initDeck, castVote } from "./deck.js";
 import { initGestures } from "./gestures.js";
+import { initPanels } from "./panels.js";
 
 for (const [id, choice] of [
   ["btn-right", "right"],
@@ -12,4 +13,5 @@ for (const [id, choice] of [
 }
 
 initGestures();
+initPanels();
 initDeck();
