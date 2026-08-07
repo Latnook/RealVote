@@ -109,16 +109,17 @@ body {
   border-right: var(--rule-w) solid var(--ink);
 }
 #btn-neutral {
-  width: 100%; height: 34px;
+  width: 100%; height: calc(34px + env(safe-area-inset-bottom));
   background: var(--bg); color: var(--muted);
   border: none; border-top: var(--rule-w) solid var(--ink);
   font-size: 12px; font-weight: 800; letter-spacing: 1px; font-family: var(--font);
+  padding-bottom: env(safe-area-inset-bottom);
   cursor: pointer;
 }
 
 /* ---- FAB, panel, toast ---- */
 .fab {
-  position: fixed; bottom: 92px; left: 18px; z-index: 30;
+  position: fixed; bottom: calc(92px + env(safe-area-inset-bottom)); left: 18px; z-index: 30;
   width: 54px; height: 54px; border-radius: 50%;
   border: var(--rule-w) solid var(--ink);
   background: var(--surface); color: var(--ink);
@@ -157,7 +158,7 @@ body {
 }
 .dialog .actions { display: flex; gap: 10px; margin-top: 12px; }
 .toast {
-  position: fixed; bottom: 120px; right: 50%; transform: translateX(50%);
+  position: fixed; bottom: calc(120px + env(safe-area-inset-bottom)); right: 50%; transform: translateX(50%);
   z-index: 60; background: var(--ink); color: var(--bg);
   font-size: 14px; font-weight: 700; padding: 10px 18px;
   box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.45);
@@ -191,7 +192,7 @@ body {
   body.has-edges .topbar { margin: 0 110px; }
   body.has-edges .rule { margin: 10px 126px 0; }
   .edge {
-    position: fixed; top: 0; bottom: 34px; width: 110px; z-index: 20;
+    position: fixed; top: 0; bottom: calc(34px + env(safe-area-inset-bottom)); width: 110px; z-index: 20;
     border: none; cursor: pointer; color: #fff;
     font-size: 20px; font-weight: 900; font-family: var(--font);
     display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;

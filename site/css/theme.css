@@ -24,4 +24,5 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .drift { animation: none; }
+  .bar-left, .bar-right { transition: none; }
 }

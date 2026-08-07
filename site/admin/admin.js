@@ -41,7 +41,7 @@ async function loadQueue() {
   $("queue").innerHTML =
     (body.suggestions || [])
       .map(
-        (s) => `<div class="row" data-sid="${s.sid}">
+        (s) => `<div class="row" data-sid="${esc(s.sid)}">
           <span class="grow">${esc(s.text)}</span>
           <input class="ap-id" placeholder="${slugify(s.text)}" size="14">
           <input class="ap-emoji" placeholder="אימוג׳י" size="4">
@@ -57,7 +57,7 @@ async function loadQueue() {
     row.querySelector(".approve").addEventListener("click", async () => {
       const item_id = row.querySelector(".ap-id").value.trim() || slugify(text);
       const emoji = row.querySelector(".ap-emoji").value.trim();
-      const { status } = await api(`/api/admin/suggestions/${sid}/approve`, {
+      const { status } = await api(`/api/admin/suggestions/${encodeURIComponent(sid)}/approve`, {
         method: "POST",
         body: JSON.stringify({ item_id, name: text, emoji }),
       });
@@ -66,7 +66,7 @@ async function loadQueue() {
       else toast(`שגיאה (${status})`);
     });
     row.querySelector(".reject").addEventListener("click", async () => {
-      const { status } = await api(`/api/admin/suggestions/${sid}/reject`, { method: "POST" });
+      const { status } = await api(`/api/admin/suggestions/${encodeURIComponent(sid)}/reject`, { method: "POST" });
       if (status === 200) { toast("נדחה"); refresh(); }
       else toast(`שגיאה (${status})`);
     });
@@ -79,7 +79,7 @@ async function loadItems() {
   if (status !== 200) return toast(`שגיאה בטעינת הפריטים (${status})`);
   $("items").innerHTML = (body.items || [])
     .map(
-      (i) => `<div class="row" data-id="${i.id}">
+      (i) => `<div class="row" data-id="${esc(i.id)}">
         <span class="grow">${esc(i.emoji || "")} ${esc(i.name)}
           <span class="muted">(${esc(i.id)} · ${i.votes_left}/${i.votes_right}/${i.votes_neutral})</span>
         </span>
@@ -89,7 +89,7 @@ async function loadItems() {
     .join("");
   for (const row of $("items").querySelectorAll(".row")) {
     row.querySelector(".archive").addEventListener("click", async () => {
-      const { status } = await api(`/api/admin/items/${row.dataset.id}`, {
+      const { status } = await api(`/api/admin/items/${encodeURIComponent(row.dataset.id)}`, {
         method: "PATCH",
         body: JSON.stringify({ status: "archived" }),
       });

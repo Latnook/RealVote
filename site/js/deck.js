@@ -24,7 +24,6 @@ let submitting = false;
 export const onDeckEmpty = (cb) => emptyCbs.push(cb);
 export const onVotesChanged = (cb) => votesCbs.push(cb);
 export const isRevealed = () => state.revealed;
-export const currentItem = () => (state.current ? state.byId.get(state.current) : null);
 export const getState = () => state;
 
 const area = () => document.getElementById("card-area");
@@ -38,8 +37,26 @@ function shuffle(arr) {
   return arr;
 }
 
+function renderLoadError() {
+  state.current = null;
+  area().innerHTML = `
+    <div class="endscreen">
+      <h2>לא הצלחנו לטעון<span class="dot">.</span></h2>
+      <p class="summary">בדקו את החיבור לאינטרנט ונסו שוב</p>
+      <div class="actions"><button id="retry-btn">נסו שוב</button></div>
+    </div>`;
+  document.getElementById("retry-btn").addEventListener("click", () => {
+    area().innerHTML = "";
+    initDeck();
+  });
+}
+
 export async function initDeck() {
   const [itemsResp, meResp] = await Promise.all([getItems(), getMe()]);
+  if (itemsResp.status !== 200) {
+    renderLoadError();
+    return;
+  }
   state.items = itemsResp.body.items || [];
   state.byId = new Map(state.items.map((i) => [i.id, i]));
   state.votes = meResp.body.votes || {};
@@ -64,7 +81,7 @@ function mediaHTML(item) {
   if (item.image_key) {
     return `<img src="/${esc(item.image_key)}" alt="${esc(item.name)}">`;
   }
-  return esc(item.emoji) || "🤔";
+  return esc(item.emoji || "🤔");
 }
 
 function cardHTML(item) {
@@ -82,6 +99,14 @@ function showNextCard() {
   state.viewingBack = false;
   if (state.queue.length === 0) {
     state.current = null;
+    if (state.items.length === 0) {
+      area().innerHTML = `
+        <div class="endscreen">
+          <h2>אין פריטים כרגע<span class="dot">.</span></h2>
+          <p class="summary">חזרו בקרוב — פריטים חדשים נוספים כל הזמן</p>
+        </div>`;
+      return;
+    }
     emptyCbs.forEach((cb) => cb());
     return;
   }
@@ -144,7 +169,8 @@ export async function castVote(choice) {
       votesCbs.forEach((cb) => cb());
       renderReveal(state.byId.get(id), choice);
     } else if (status === 409) {
-      state.votes[id] = state.votes[id] || "neutral";
+      const me = await getMe();
+      state.votes = me.body.votes || state.votes;
       state.queue = state.queue.filter((q) => q !== id);
       votesCbs.forEach((cb) => cb());
       showNextCard();

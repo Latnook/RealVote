@@ -33,6 +33,26 @@ function updateFab() {
   $("fab").classList.toggle("hidden", votes < 5);
 }
 
+/* ---- overlay a11y helper (dialog role, focus trap entry, Escape-to-close) ---- */
+function openOverlay(el, focusEl, onClose) {
+  const opener = document.activeElement;
+  el.setAttribute("role", "dialog");
+  el.setAttribute("aria-modal", "true");
+  el.classList.remove("hidden");
+  focusEl?.focus();
+  const onKeydown = (e) => {
+    if (e.key === "Escape") close();
+  };
+  document.addEventListener("keydown", onKeydown);
+  function close() {
+    document.removeEventListener("keydown", onKeydown);
+    el.classList.add("hidden");
+    onClose?.();
+    if (opener instanceof HTMLElement) opener.focus();
+  }
+  return close;
+}
+
 /* ---- my votes ---- */
 function crowdLine(item, mine) {
   const counts = { left: item.votes_left, right: item.votes_right, neutral: item.votes_neutral };
@@ -61,8 +81,8 @@ function openMyVotes() {
       <button class="iconbtn" id="panel-close" aria-label="סגירה">✕</button>
     </div>
     ${rows || '<p style="margin-top:16px; color:var(--muted)">עוד לא הצבעת על כלום.</p>'}`;
-  panel.classList.remove("hidden");
-  $("panel-close").addEventListener("click", () => panel.classList.add("hidden"));
+  const close = openOverlay(panel, $("panel-close"));
+  $("panel-close").addEventListener("click", close);
 }
 
 /* ---- suggest ---- */
@@ -77,13 +97,15 @@ function openSuggest() {
         <button class="secondary" id="suggest-cancel">ביטול</button>
       </div>
     </div>`;
-  d.classList.remove("hidden");
-  $("suggest-cancel").addEventListener("click", () => d.classList.add("hidden"));
-  $("suggest-send").addEventListener("click", async () => {
+  const close = openOverlay(d, $("suggest-text"));
+  $("suggest-cancel").addEventListener("click", close);
+  $("suggest-send").addEventListener("click", async (e) => {
     const text = $("suggest-text").value.trim();
     if (!text) return;
+    const btn = e.currentTarget;
+    btn.disabled = true;
     const { status } = await suggest(text);
-    d.classList.add("hidden");
+    close();
     if (status === 202) showToast("תודה! ההצעה תיבדק");
     else if (status === 429) showToast("הגעתם למכסה היומית, נסו מחר");
     else showToast("משהו השתבש, נסו שוב");
@@ -97,8 +119,8 @@ function agreementPct() {
   if (!voted.length) return 0;
   const agreed = voted.filter((i) => {
     const counts = { left: i.votes_left, right: i.votes_right, neutral: i.votes_neutral };
-    const majority = Object.keys(counts).reduce((a, b) => (counts[a] >= counts[b] ? a : b));
-    return votes[i.id] === majority;
+    const max = Math.max(counts.left, counts.right, counts.neutral);
+    return counts[votes[i.id]] === max;
   }).length;
   return Math.round((100 * agreed) / voted.length);
 }
