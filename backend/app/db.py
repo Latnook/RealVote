@@ -139,6 +139,21 @@ def list_active_items():
         kwargs["ExclusiveStartKey"] = resp["LastEvaluatedKey"]
 
 
+def list_all_items():
+    """Every item including archived — admin listing only."""
+    items, kwargs = [], {}
+    while True:
+        resp = table().scan(
+            FilterExpression="SK = :meta",
+            ExpressionAttributeValues={":meta": "META"},
+            **kwargs,
+        )
+        items.extend(_to_item_dict(r) for r in resp["Items"])
+        if "LastEvaluatedKey" not in resp:
+            return sorted(items, key=lambda i: i["id"])
+        kwargs["ExclusiveStartKey"] = resp["LastEvaluatedKey"]
+
+
 def update_item(item_id, **fields):
     allowed = {"name", "emoji", "image_key", "status", "category"}
     updates = {k: v for k, v in fields.items() if k in allowed}
