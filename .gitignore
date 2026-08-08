@@ -23,3 +23,6 @@ __pycache__/
 
 # Item pictures added locally (they belong in S3; the CSV records where they came from)
 site/img/
+
+# Local preview artefacts
+image-grid.png

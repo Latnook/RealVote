@@ -151,6 +151,76 @@ def sanitize_svg(src, dest):
     tree.write(dest, encoding="utf-8", xml_declaration=True)
 
 
+
+PLATE = (242, 243, 245)          # --ink #F2F3F5, the light plate behind logo artwork
+PLATE_BOX = (1200, 800)          # 3:2, so object-fit:cover never crops a plated image
+PLATE_PAD = 0.82                 # artwork occupies this much of the plate
+BACKUP = IMG_DIR / ".replate-backup.json"
+
+
+def looks_like_logo(path):
+    """Artwork-on-a-background rather than a scene: transparent, or a flat uniform border.
+
+    Photos want the full-bleed dark treatment; logos and wordmarks get cropped by it
+    (רולדין rendered as "OLAI") or vanish into the card when the artwork is dark.
+    """
+    from PIL import Image
+    if path.suffix.lower() == ".svg":
+        return True, "svg"
+    im = Image.open(path)
+    if im.mode in ("RGBA", "LA") or "transparency" in im.info:
+        a = list(im.convert("RGBA").getchannel("A").getdata())
+        if sum(1 for v in a if v < 250) / len(a) > 0.05:
+            return True, "transparent"
+    rgb = im.convert("RGB"); w, h = rgb.size
+    step_x, step_y = max(1, w // 60), max(1, h // 60)
+    edge = ([rgb.getpixel((x, 0)) for x in range(0, w, step_x)]
+            + [rgb.getpixel((x, h - 1)) for x in range(0, w, step_x)]
+            + [rgb.getpixel((0, y)) for y in range(0, h, step_y)]
+            + [rgb.getpixel((w - 1, y)) for y in range(0, h, step_y)])
+    mean = tuple(sum(c) / len(c) for c in zip(*edge))
+    flat = sum(max(abs(px[i] - mean[i]) for i in range(3)) for px in edge) / len(edge) < 12
+    plain = min(mean) > 225 or max(mean) < 32
+    return (flat and plain), ("flat-bg" if (flat and plain) else "photo")
+
+
+def plate_raster(src, dest):
+    from PIL import Image
+    im = Image.open(src).convert("RGBA")
+    canvas = Image.new("RGB", PLATE_BOX, PLATE)
+    s = min(PLATE_BOX[0] / im.width, PLATE_BOX[1] / im.height) * PLATE_PAD
+    r = im.resize((max(1, int(im.width * s)), max(1, int(im.height * s))), Image.LANCZOS)
+    canvas.paste(r, ((PLATE_BOX[0] - r.width) // 2, (PLATE_BOX[1] - r.height) // 2), r)
+    canvas.save(dest, "WEBP", quality=QUALITY)
+
+
+def plate_svg(src, dest):
+    """Nest the artwork inside a 3:2 outer SVG with a light background — stays vector."""
+    root = ET.fromstring(src.read_bytes())
+    vb = root.get("viewBox")
+    if vb:
+        nums = [float(x) for x in vb.replace(",", " ").split()]
+        vw, vh = nums[2], nums[3]
+    else:
+        num = lambda v: float(re.sub(r"[^0-9.]", "", v or "") or 100)
+        vw, vh = num(root.get("width")), num(root.get("height"))
+        root.set("viewBox", f"0 0 {vw} {vh}")
+    W, H = 300, 200
+    pad = (1 - PLATE_PAD) / 2
+    inner_w, inner_h = W * PLATE_PAD, H * PLATE_PAD
+    root.set("x", str(W * pad)); root.set("y", str(H * pad))
+    root.set("width", str(inner_w)); root.set("height", str(inner_h))
+    root.set("preserveAspectRatio", "xMidYMid meet")
+    NS = "http://www.w3.org/2000/svg"
+    outer = ET.Element(f"{{{NS}}}svg", {"viewBox": f"0 0 {W} {H}",
+                                        "width": str(W), "height": str(H)})
+    ET.SubElement(outer, f"{{{NS}}}rect", {"width": str(W), "height": str(H),
+                                           "fill": "#%02X%02X%02X" % PLATE})
+    outer.append(root)
+    ET.register_namespace("", NS)
+    ET.ElementTree(outer).write(dest, encoding="utf-8", xml_declaration=True)
+
+
 def fetch(url, tmpdir):
     """Download a remote image to a temp file. Never referenced remotely at serve time.
 
@@ -230,6 +300,89 @@ def attach(base, items, item_id, src, tmpdir=None):
     return True
 
 
+
+def replate(base, items):
+    """Re-render logo-like images onto a light plate. Reversible via --unplate."""
+    backup = json.loads(BACKUP.read_text()) if BACKUP.exists() else {}
+    done = skipped = 0
+    for iid, item in sorted(items.items()):
+        key = item.get("image_key")
+        if not key:
+            continue
+        src = ROOT / "site" / key
+        if not src.is_file():
+            print(f"  ? {iid}: {key} missing on disk, skipped")
+            continue
+        logo, why = looks_like_logo(src)
+        if not logo:
+            skipped += 1
+            continue
+        ext = "svg" if src.suffix.lower() == ".svg" else "webp"
+        new_key = f"img/{iid}-plated-{int(time.time())}.{ext}"
+        dest = ROOT / "site" / new_key
+        try:
+            (plate_svg if ext == "svg" else plate_raster)(src, dest)
+        except Exception as e:
+            print(f"  x {iid}: plating failed — {e}")
+            continue
+        status, _ = api(base, f"/api/admin/items/{iid}", "PATCH", {"image_key": new_key})
+        if status != 200:
+            dest.unlink(missing_ok=True)
+            print(f"  x {iid}: PATCH returned {status}")
+            continue
+        backup.setdefault(iid, key)      # remember the ORIGINAL, not an intermediate
+        print(f"  + {iid}: plated ({why})")
+        done += 1
+    BACKUP.write_text(json.dumps(backup, indent=2))
+    print(f"\nplated {done}, left {skipped} photo(s) full-bleed")
+    print(f"revert any time with:  ./scripts/add-image.py --unplate")
+
+
+def unplate(base, items):
+    if not BACKUP.exists():
+        sys.exit("nothing to revert — no backup file")
+    backup = json.loads(BACKUP.read_text())
+    n = 0
+    for iid, old_key in backup.items():
+        if iid not in items:
+            continue
+        status, _ = api(base, f"/api/admin/items/{iid}", "PATCH", {"image_key": old_key})
+        if status == 200:
+            print(f"  - {iid}: back to {old_key}")
+            n += 1
+        else:
+            print(f"  x {iid}: PATCH returned {status}")
+    BACKUP.unlink()
+    print(f"\nreverted {n} item(s) to their original images")
+
+
+
+def relink(base, items):
+    """Re-point items at images already on disk.
+
+    DynamoDB Local keeps everything in memory, so stopping the container loses every
+    image_key while site/img/ still holds the files. Filenames start with the item id,
+    so the link can be rebuilt without re-downloading anything.
+    """
+    best = {}
+    for f in sorted(IMG_DIR.glob("*")):
+        if f.name.startswith("."):
+            continue
+        m = re.match(r"(.+?)-(?:plated-)?(\d{10})\.(webp|svg)$", f.name)
+        if not m:
+            continue
+        iid, ts, _ = m.groups()
+        if iid in items and (iid not in best or ts > best[iid][0]):
+            best[iid] = (ts, f"img/{f.name}")
+    n = 0
+    for iid, (_, key) in sorted(best.items()):
+        if items[iid].get("image_key") == key:
+            continue
+        status, _ = api(base, f"/api/admin/items/{iid}", "PATCH", {"image_key": key})
+        n += status == 200
+    print(f"relinked {n} item(s) to images already on disk ({len(best)} matched)")
+
+
 CSV_FIELDS = ["id", "name", "category", "emoji", "current_image", "image_url", "notes"]
 
 
@@ -300,6 +453,12 @@ def main():
     ap.add_argument("--from-csv", type=pathlib.Path, metavar="FILE",
                     help="attach images listed in the image_url column of that spreadsheet")
     ap.add_argument("--missing", action="store_true", help="list items with no picture and exit")
+    ap.add_argument("--replate", action="store_true",
+                    help="render logo-like images onto a light plate (reversible)")
+    ap.add_argument("--unplate", action="store_true",
+                    help="undo --replate, restoring the original images")
+    ap.add_argument("--relink", action="store_true",
+                    help="re-point items at images already in site/img/ (after a DB reset)")
     ap.add_argument("--only-missing", action="store_true",
                     help="skip items that already have a picture (handy when retrying failures)")
     ap.add_argument("--base", default="http://localhost:8080", help="local server base URL")
@@ -309,6 +468,18 @@ def main():
 
     if args.make_csv:
         make_csv(args.make_csv, items)
+        return
+
+    if args.relink:
+        relink(args.base, items)
+        return
+
+    if args.replate:
+        replate(args.base, items)
+        return
+
+    if args.unplate:
+        unplate(args.base, items)
         return
 
     if args.missing:
