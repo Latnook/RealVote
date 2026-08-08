@@ -10,6 +10,16 @@ Python Lambda backend — all runnable locally.
 
 Site: http://localhost:8080 · Admin: http://localhost:8080/admin/ (auto-authorized locally)
 
+## Features
+
+- Vote ימני / שמאלני / ניטרלי on each item; stats reveal after voting.
+- A one-time "האם אתה ימני או שמאלני?" card appears between your 3rd and 10th vote; afterwards
+  reveals can show cross-attribution lines like "78% מהימנים חושבים שזה שמאלני" (shown only when a
+  camp has 25+ decisive votes on that item and crosses 70%).
+- Items are categorised; the ☰ menu lets you switch categories off and the deck follows.
+- `/admin/` manages the suggestion queue and every item: rename, re-file, emoji, image upload or
+  replace, archive and restore.
+
 ## Tests
 
     docker compose up -d dynamodb

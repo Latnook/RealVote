@@ -1,5 +1,9 @@
 # LR — "דברים שהם … בעיניי" voting site — Design
 
+> **Extended by** [`2026-08-07-lr-affiliation-categories-design.md`](2026-08-07-lr-affiliation-categories-design.md):
+> visitor self-identification with cross-attribution stats, item categories with visitor filters,
+> and admin item management.
+
 **Date:** 2026-08-06
 **Status:** Approved by Ariel (UX 2026-08-06, data/API 2026-08-06, infra 2026-08-06)
 **Working name:** `lr` → site at `lr.latnook.com` (placeholder; subdomain is a Terraform
