@@ -9,6 +9,14 @@ from botocore.exceptions import ClientError
 from app import categories
 
 CHOICES = {"left": "votes_left", "right": "votes_right", "neutral": "votes_neutral"}
+AFFILIATIONS = ("right", "left", "center")
+
+
+def _xt_attr(affiliation, choice):
+    """Cross-tab counter name, e.g. xt_right_left = ימנים who voted שמאלני."""
+    if affiliation not in AFFILIATIONS or choice not in CHOICES:
+        raise KeyError((affiliation, choice))
+    return f"xt_{affiliation}_{choice}"
 
 
 class AlreadyVoted(Exception):
@@ -83,6 +91,10 @@ def _to_item_dict(record):
     }
     if record.get("image_key"):
         d["image_key"] = record["image_key"]
+    for aff in AFFILIATIONS:
+        for choice in CHOICES:
+            key = f"xt_{aff}_{choice}"
+            d[key] = int(record.get(key, 0))
     return d
 
 
@@ -146,6 +158,10 @@ def update_item(item_id, **fields):
 
 def record_vote(uid, item_id, choice):
     counter = CHOICES[choice]  # KeyError on invalid choice, before any write
+    affiliation = get_affiliation(uid)
+    add_expr = f"ADD {counter} :one"
+    if affiliation:
+        add_expr += f", {_xt_attr(affiliation, choice)} :one"
     client = _client()
     name = os.environ["TABLE_NAME"]
     try:
@@ -164,9 +180,9 @@ def record_vote(uid, item_id, choice):
                 {"Update": {
                     "TableName": name,
                     "Key": {"PK": {"S": f"ITEM#{item_id}"}, "SK": {"S": "META"}},
-                    "UpdateExpression": "ADD #c :one",
+                    "UpdateExpression": add_expr,
                     "ConditionExpression": "attribute_exists(PK) AND #s = :active",
-                    "ExpressionAttributeNames": {"#c": counter, "#s": "status"},
+                    "ExpressionAttributeNames": {"#s": "status"},
                     "ExpressionAttributeValues": {
                         ":one": {"N": "1"},
                         ":active": {"S": "active"},
@@ -262,3 +278,56 @@ def set_suggestion_status(sid, status):
         if e.response["Error"]["Code"] == "ConditionalCheckFailedException":
             raise NotFound(sid) from e
         raise
+
+
+def get_affiliation(uid):
+    resp = table().get_item(Key={"PK": f"USER#{uid}", "SK": "PROFILE"})
+    record = resp.get("Item")
+    return record["affiliation"] if record else None
+
+
+def get_affiliation_stats():
+    resp = table().get_item(Key={"PK": "STATS", "SK": "AFFILIATION"})
+    record = resp.get("Item") or {}
+    return {aff: int(record.get(f"affil_{aff}", 0)) for aff in AFFILIATIONS}
+
+
+def set_affiliation(uid, affiliation):
+    """Claim the visitor's affiliation (once only), then back-fill their earlier votes."""
+    if affiliation not in AFFILIATIONS:
+        raise KeyError(affiliation)
+    try:
+        table().put_item(
+            Item={
+                "PK": f"USER#{uid}",
+                "SK": "PROFILE",
+                "affiliation": affiliation,
+                "ts": int(time.time()),
+            },
+            ConditionExpression="attribute_not_exists(PK)",
+        )
+    except ClientError as e:
+        if e.response["Error"]["Code"] == "ConditionalCheckFailedException":
+            raise AlreadyVoted(uid) from e
+        raise
+
+    table().update_item(
+        Key={"PK": "STATS", "SK": "AFFILIATION"},
+        UpdateExpression=f"ADD affil_{affiliation} :one",
+        ExpressionAttributeValues={":one": 1},
+    )
+
+    # Back-fill: attribute votes cast before the visitor identified themselves.
+    for item_id, choice in get_user_votes(uid).items():
+        try:
+            table().update_item(
+                Key={"PK": f"ITEM#{item_id}", "SK": "META"},
+                UpdateExpression=f"ADD {_xt_attr(affiliation, choice)} :one",
+                ExpressionAttributeValues={":one": 1},
+                ConditionExpression="attribute_exists(PK)",
+            )
+        except ClientError as e:
+            if e.response["Error"]["Code"] != "ConditionalCheckFailedException":
+                raise  # item vanished mid-backfill: skip it, stats are approximate
+
+    return get_affiliation_stats()
