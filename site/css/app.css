@@ -70,9 +70,11 @@ body {
   font-size: 64px;
   overflow: hidden;
 }
-/* Artwork with transparency needs something light behind it or dark logos vanish
-   into the card. Photos are opaque and cover this entirely, so they never see it. */
-.media:has(img) { background: var(--plate); }
+/* Transparent artwork sits on the card surface like everything else. The exception is
+   artwork whose ink is dark enough to disappear against it — currently only the
+   Goldstar wordmark, which is black on transparent. If more of these turn up, promote
+   this to a per-item flag from the API rather than growing a list of ids here. */
+.card[data-item="goldstar-beer"] .media { background: var(--plate); }
 .media img {
   display: block;
   max-width: min(64vw, 260px); max-height: min(42vw, 170px);
