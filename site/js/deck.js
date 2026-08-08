@@ -141,14 +141,17 @@ function cardHTML(item) {
 function showNextCard() {
   state.revealed = false;
   state.viewingBack = false;
-  if (state.selected && state.selected.size === 0) {
-    state.current = null;
-    area().innerHTML = `
-      <div class="endscreen">
-        <h2>בחרו לפחות קטגוריה אחת<span class="dot">.</span></h2>
-        <p class="summary">פתחו את התפריט ובחרו קטגוריות</p>
-      </div>`;
-    return;
+  if (state.selected) {
+    const inScope = state.items.filter(inSelection);
+    if (state.selected.size === 0 || inScope.length === 0) {
+      state.current = null;
+      area().innerHTML = `
+        <div class="endscreen">
+          <h2>בחרו לפחות קטגוריה אחת<span class="dot">.</span></h2>
+          <p class="summary">אין פריטים בקטגוריות שנבחרו</p>
+        </div>`;
+      return;
+    }
   }
   if (state.queue.length === 0) {
     state.current = null;
