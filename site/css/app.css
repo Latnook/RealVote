@@ -81,6 +81,14 @@ body {
   max-width: min(64vw, 260px); max-height: min(42vw, 170px);
   width: auto; height: auto;
 }
+/* Vector logos carry whatever intrinsic size their author happened to export, so they
+   arrive at wildly different scales (האח הגדול tiny beside a full-size crest). Being
+   vectors they lose nothing by being scaled, so give them all the same box and let
+   object-fit preserve each one's aspect ratio inside it. */
+.media img[src$=".svg"] {
+  width: min(64vw, 260px); height: min(42vw, 170px);
+  object-fit: contain;
+}
 .hint { margin-top: 14px; font-size: 11px; letter-spacing: 1px; color: var(--muted); }
 
 /* ---- reveal ---- */

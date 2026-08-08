@@ -27,8 +27,12 @@ export function initGestures() {
 
   area.addEventListener("pointerdown", (e) => {
     if (drag) return;
-    const card = e.target.closest("#card");
+    // A swipe may start anywhere in the stage, not just on the card itself — on a phone
+    // most of the reachable area is the empty space below it. The card is still what
+    // moves; the touch merely has to land inside #card-area.
+    const card = document.getElementById("card");
     if (!card || isRevealed()) return;
+    if (e.target.closest("button, a, input, textarea")) return;   // let controls be controls
     drag = { card, x0: e.clientX, y0: e.clientY, id: e.pointerId };
     card.setPointerCapture(e.pointerId);
   });
