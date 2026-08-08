@@ -8,6 +8,7 @@ CATEGORIES = [
     {"slug": "consumer", "label": "צרכנות"},
     {"slug": "social", "label": "חברתי"},
     {"slug": "sport", "label": "ספורט"},
+    {"slug": "games", "label": "משחקים"},
     {"slug": "movies", "label": "סרטים"},
     {"slug": "tv", "label": "תוכניות טלוויזיה"},
     {"slug": "conspiracy", "label": "תיאוריות קונספירציה"},

@@ -1,26 +1,380 @@
 [
-  {"id": "friday-noon-wedding", "name": "חתונת שישי בצהריים", "emoji": "💍", "category": "events"},
-  {"id": "soy-milk-coffee", "name": "קפה עם חלב סויה", "emoji": "🥛", "category": "food"},
-  {"id": "going-to-theatre", "name": "ללכת לתיאטרון", "emoji": "🎭", "category": "events"},
-  {"id": "fridge-magnets", "name": "מלא מגנטים על המקרר", "emoji": "🧲", "category": "home"},
-  {"id": "keter-chairs", "name": "כיסאות כתר בגינה", "emoji": "🪑", "category": "home"},
-  {"id": "home-sign", "name": "שלט HOME בכניסה לבית", "emoji": "🏠", "category": "home"},
-  {"id": "kitchen-sign", "name": "שלט KITCHEN במטבח", "emoji": "🍳", "category": "home"},
-  {"id": "stepup-competition", "name": "לנסות לנצח בסטפ־אפ", "emoji": "👟", "category": "sport"},
-  {"id": "zimmer-jacuzzi", "name": "צימר עם ג׳קוזי", "emoji": "🛁", "category": "travel"},
-  {"id": "homemade-kombucha", "name": "קומבוצ׳ה ביתית", "emoji": "🫙", "category": "food"},
-  {"id": "friday-night-party", "name": "מסיבה בשישי בערב", "emoji": "🪩", "category": "events"},
-  {"id": "park-bbq", "name": "מנגל בפארק הלאומי", "emoji": "🍖", "category": "food"},
-  {"id": "berlin-vacation", "name": "חופשה בברלין", "emoji": "✈️", "category": "travel"},
-  {"id": "dubai-vacation", "name": "חופשה בדובאי", "emoji": "🏙️", "category": "travel"},
-  {"id": "vegan-food", "name": "אוכל טבעוני", "emoji": "🥦", "category": "food"},
-  {"id": "focaccia-everywhere", "name": "פוקצ׳ה בכל מסעדה", "emoji": "🥖", "category": "food"},
-  {"id": "shoresh-sandals", "name": "סנדלי שורש", "emoji": "🩴", "category": "consumer"},
-  {"id": "car-trade-in", "name": "טרייד־אין כל שנתיים", "emoji": "🚗", "category": "consumer"},
-  {"id": "sup-kinneret", "name": "סאפ בכנרת", "emoji": "🏄", "category": "sport"},
-  {"id": "adopted-dog", "name": "כלב מעורב מאומץ", "emoji": "🐕", "category": "social"},
-  {"id": "pedigree-cat", "name": "חתול גזעי", "emoji": "🐈", "category": "social"},
-  {"id": "black-coffee-glass", "name": "קפה שחור בכוס זכוכית", "emoji": "☕", "category": "food"},
-  {"id": "corn-pizza", "name": "פיצה עם תירס", "emoji": "🌽", "category": "food"},
-  {"id": "6am-workout", "name": "אימון כושר בשש בבוקר", "emoji": "🏋️", "category": "sport"}
+  {
+    "id": "friday-noon-wedding",
+    "name": "חתונת שישי בצהריים",
+    "emoji": "💍",
+    "category": "events"
+  },
+  {
+    "id": "soy-milk-coffee",
+    "name": "קפה עם חלב סויה",
+    "emoji": "🥛",
+    "category": "food"
+  },
+  {
+    "id": "going-to-theatre",
+    "name": "ללכת לתיאטרון",
+    "emoji": "🎭",
+    "category": "events"
+  },
+  {
+    "id": "fridge-magnets",
+    "name": "מלא מגנטים על המקרר",
+    "emoji": "🧲",
+    "category": "home"
+  },
+  {
+    "id": "keter-chairs",
+    "name": "כיסאות כתר בגינה",
+    "emoji": "🪑",
+    "category": "home"
+  },
+  {
+    "id": "home-sign",
+    "name": "שלט HOME בכניסה לבית",
+    "emoji": "🏠",
+    "category": "home"
+  },
+  {
+    "id": "kitchen-sign",
+    "name": "שלט KITCHEN במטבח",
+    "emoji": "🍳",
+    "category": "home"
+  },
+  {
+    "id": "stepup-competition",
+    "name": "לנסות לנצח בסטפ־אפ",
+    "emoji": "👟",
+    "category": "sport"
+  },
+  {
+    "id": "zimmer-jacuzzi",
+    "name": "צימר עם ג׳קוזי",
+    "emoji": "🛁",
+    "category": "travel"
+  },
+  {
+    "id": "homemade-kombucha",
+    "name": "קומבוצ׳ה ביתית",
+    "emoji": "🫙",
+    "category": "food"
+  },
+  {
+    "id": "friday-night-party",
+    "name": "מסיבה בשישי בערב",
+    "emoji": "🪩",
+    "category": "events"
+  },
+  {
+    "id": "park-bbq",
+    "name": "מנגל בפארק הלאומי",
+    "emoji": "🍖",
+    "category": "food"
+  },
+  {
+    "id": "berlin-vacation",
+    "name": "חופשה בברלין",
+    "emoji": "✈️",
+    "category": "travel"
+  },
+  {
+    "id": "dubai-vacation",
+    "name": "חופשה בדובאי",
+    "emoji": "🏙️",
+    "category": "travel"
+  },
+  {
+    "id": "vegan-food",
+    "name": "אוכל טבעוני",
+    "emoji": "🥦",
+    "category": "food"
+  },
+  {
+    "id": "focaccia-everywhere",
+    "name": "פוקצ׳ה בכל מסעדה",
+    "emoji": "🥖",
+    "category": "food"
+  },
+  {
+    "id": "shoresh-sandals",
+    "name": "סנדלי שורש",
+    "emoji": "🩴",
+    "category": "consumer"
+  },
+  {
+    "id": "car-trade-in",
+    "name": "טרייד־אין כל שנתיים",
+    "emoji": "🚗",
+    "category": "consumer"
+  },
+  {
+    "id": "sup-kinneret",
+    "name": "סאפ בכנרת",
+    "emoji": "🏄",
+    "category": "sport"
+  },
+  {
+    "id": "adopted-dog",
+    "name": "כלב מעורב מאומץ",
+    "emoji": "🐕",
+    "category": "social"
+  },
+  {
+    "id": "pedigree-cat",
+    "name": "חתול גזעי",
+    "emoji": "🐈",
+    "category": "social"
+  },
+  {
+    "id": "black-coffee-glass",
+    "name": "קפה שחור בכוס זכוכית",
+    "emoji": "☕",
+    "category": "food"
+  },
+  {
+    "id": "corn-pizza",
+    "name": "פיצה עם תירס",
+    "emoji": "🌽",
+    "category": "food"
+  },
+  {
+    "id": "6am-workout",
+    "name": "אימון כושר בשש בבוקר",
+    "emoji": "🏋️",
+    "category": "sport"
+  },
+  {
+    "id": "prefer-iphone",
+    "name": "להעדיף אייפון על אנדרואיד",
+    "emoji": "📱",
+    "category": "consumer"
+  },
+  {
+    "id": "prefer-android",
+    "name": "להעדיף אנדרואיד על אייפון",
+    "emoji": "🤖",
+    "category": "consumer"
+  },
+  {
+    "id": "second-hand-clothes",
+    "name": "בגדים יד שנייה",
+    "emoji": "🧥",
+    "category": "consumer"
+  },
+  {
+    "id": "football-shirts",
+    "name": "ללכת עם חולצות כדורגל",
+    "emoji": "🎽",
+    "category": "consumer"
+  },
+  {
+    "id": "messi-over-ronaldo",
+    "name": "להעדיף את מסי על רונאלדו",
+    "emoji": "🐐",
+    "category": "sport"
+  },
+  {
+    "id": "ronaldo-over-messi",
+    "name": "להעדיף את רונאלדו על מסי",
+    "emoji": "⚽",
+    "category": "sport"
+  },
+  {
+    "id": "hapoel-beer-sheva",
+    "name": "הפועל באר שבע",
+    "emoji": "🔴",
+    "category": "sport"
+  },
+  {
+    "id": "maccabi-haifa",
+    "name": "מכבי חיפה",
+    "emoji": "🟢",
+    "category": "sport"
+  },
+  {
+    "id": "maccabi-tel-aviv",
+    "name": "מכבי תל אביב",
+    "emoji": "🟡",
+    "category": "sport"
+  },
+  {
+    "id": "real-madrid",
+    "name": "ריאל מדריד",
+    "emoji": "👑",
+    "category": "sport"
+  },
+  {
+    "id": "barcelona",
+    "name": "ברצלונה",
+    "emoji": "🔵",
+    "category": "sport"
+  },
+  {
+    "id": "psg",
+    "name": "פריז סן-ז'רמן",
+    "emoji": "🗼",
+    "category": "sport"
+  },
+  {
+    "id": "ice-skating",
+    "name": "החלקה על הקרח",
+    "emoji": "⛸️",
+    "category": "sport"
+  },
+  {
+    "id": "rhythmic-gymnastics",
+    "name": "התעמלות אומנותית",
+    "emoji": "🤸",
+    "category": "sport"
+  },
+  {
+    "id": "poker",
+    "name": "פוקר",
+    "emoji": "🃏",
+    "category": "games"
+  },
+  {
+    "id": "chess",
+    "name": "שחמט",
+    "emoji": "♟️",
+    "category": "games"
+  },
+  {
+    "id": "catan",
+    "name": "קטאן",
+    "emoji": "🎲",
+    "category": "games"
+  },
+  {
+    "id": "monopoly",
+    "name": "מונופול",
+    "emoji": "🎩",
+    "category": "games"
+  },
+  {
+    "id": "lotto",
+    "name": "למלא לוטו",
+    "emoji": "🎰",
+    "category": "games"
+  },
+  {
+    "id": "winner-betting",
+    "name": "למלא ווינר",
+    "emoji": "🎯",
+    "category": "games"
+  },
+  {
+    "id": "big-brother",
+    "name": "האח הגדול",
+    "emoji": "📺",
+    "category": "tv"
+  },
+  {
+    "id": "pay-for-big-brother",
+    "name": "לשלם לערוץ האח הגדול",
+    "emoji": "💳",
+    "category": "tv"
+  },
+  {
+    "id": "the-voice",
+    "name": "דה וויס",
+    "emoji": "🎤",
+    "category": "tv"
+  },
+  {
+    "id": "spongebob",
+    "name": "בובספוג",
+    "emoji": "🧽",
+    "category": "tv"
+  },
+  {
+    "id": "deep-state",
+    "name": "דיפ סטייט",
+    "emoji": "🕴️",
+    "category": "conspiracy"
+  },
+  {
+    "id": "flat-earth",
+    "name": "תיאוריית הארץ השטוחה",
+    "emoji": "🌍",
+    "category": "conspiracy"
+  },
+  {
+    "id": "moon-landing-hoax",
+    "name": "תיאוריית זיוף הנחיתה על הירח",
+    "emoji": "🌕",
+    "category": "conspiracy"
+  },
+  {
+    "id": "believe-in-aliens",
+    "name": "להאמין בחייזרים",
+    "emoji": "👽",
+    "category": "conspiracy"
+  },
+  {
+    "id": "falafel-over-shawarma",
+    "name": "להעדיף פלאפל על שווארמה",
+    "emoji": "🧆",
+    "category": "food"
+  },
+  {
+    "id": "shawarma-over-falafel",
+    "name": "להעדיף שווארמה על פלאפל",
+    "emoji": "🌯",
+    "category": "food"
+  },
+  {
+    "id": "billboard-proposal",
+    "name": "הצעת נישואין עם שלט גדול",
+    "emoji": "📣",
+    "category": "events"
+  },
+  {
+    "id": "work-from-cafes",
+    "name": "לעבוד מבתי קפה",
+    "emoji": "💻",
+    "category": "social"
+  },
+  {
+    "id": "metal-music",
+    "name": "מוזיקת מטאל",
+    "emoji": "🤘",
+    "category": "social"
+  },
+  {
+    "id": "no-tip",
+    "name": "לא להשאיר טיפ",
+    "emoji": "🧾",
+    "category": "social"
+  },
+  {
+    "id": "anti-ai",
+    "name": "להתנגד לשימוש בבינה מלאכותית",
+    "emoji": "🧠",
+    "category": "social"
+  },
+  {
+    "id": "not-voting",
+    "name": "לא להצביע בבחירות",
+    "emoji": "🗳️",
+    "category": "social"
+  },
+  {
+    "id": "dogs-over-cats",
+    "name": "להעדיף כלבים על חתולים",
+    "emoji": "🐶",
+    "category": "social"
+  },
+  {
+    "id": "cats-over-dogs",
+    "name": "להעדיף חתולים על כלבים",
+    "emoji": "🐱",
+    "category": "social"
+  },
+  {
+    "id": "puccivelli",
+    "name": "פוצ'יוולי",
+    "emoji": "🍸",
+    "category": "social"
+  }
 ]
