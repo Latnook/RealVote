@@ -32,12 +32,14 @@
         <input id="c-id" placeholder="item-id (a-z, 0-9, -)" pattern="[a-z0-9-]{1,64}">
         <input id="c-name" placeholder="שם בעברית" required>
         <input id="c-emoji" placeholder="אימוג׳י" size="4">
+        <select id="c-cat" required></select>
         <label><input type="checkbox" id="c-image"> עם תמונה</label>
         <input type="file" id="c-file" accept="image/*" class="hidden">
         <button type="submit">יצירה</button>
       </form>
     </section>
     <section>
+      <label class="inline"><input type="checkbox" id="show-archived"> הצג בארכיון</label>
       <h2>פריטים</h2>
       <div id="items"></div>
     </section>

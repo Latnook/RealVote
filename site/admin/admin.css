@@ -19,3 +19,9 @@ button { background: var(--ink); color: var(--bg); border: 2px solid var(--ink);
 button.ghost { background: none; color: var(--muted); border-color: var(--muted); }
 form { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; align-items: center; }
 .toast { position: fixed; bottom: 30px; right: 50%; transform: translateX(50%); background: var(--ink); color: var(--bg); font-weight: 700; padding: 10px 18px; box-shadow: 4px 4px 0 rgba(0,0,0,.45); }
+.cat-group { margin-top: 18px; }
+.cat-group h3 { font-size: 14px; font-weight: 900; border-bottom: 2px solid var(--muted); padding-bottom: 4px; }
+.empty-cat { padding: 8px 2px; font-style: italic; }
+.row.archived { opacity: 0.45; }
+.inline { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; margin-top: 10px; }
+select { background: var(--surface); color: var(--ink); border: 2px solid var(--ink); padding: 6px; font-family: var(--font); font-size: 13px; }

@@ -34,6 +34,28 @@ const slugify = (text) =>
   text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 64) ||
   `item-${Date.now() % 100000}`;
 
+/* ---- categories ---- */
+let CATEGORIES = [];
+const DEFAULT_CAT = "other";
+
+async function loadCategories() {
+  const { status, body } = await api("/api/items");
+  if (status === 200) CATEGORIES = body.categories || [];
+  const opts = CATEGORIES.map(
+    (c) => `<option value="${esc(c.slug)}">${esc(c.label)}</option>`
+  ).join("");
+  $("c-cat").innerHTML = opts;
+  $("c-cat").value = DEFAULT_CAT;
+}
+
+const catSelect = (selected, cls) =>
+  `<select class="${cls}">${CATEGORIES.map(
+    (c) =>
+      `<option value="${esc(c.slug)}"${c.slug === selected ? " selected" : ""}>${esc(
+        c.label
+      )}</option>`
+  ).join("")}</select>`;
+
 /* ---- queue ---- */
 async function loadQueue() {
   const { status, body } = await api("/api/admin/suggestions");
@@ -45,6 +67,7 @@ async function loadQueue() {
           <span class="grow">${esc(s.text)}</span>
           <input class="ap-id" placeholder="${slugify(s.text)}" size="14">
           <input class="ap-emoji" placeholder="אימוג׳י" size="4">
+          ${catSelect(DEFAULT_CAT, "ap-cat")}
           <button class="approve">אישור</button>
           <button class="ghost reject">דחייה</button>
         </div>`
@@ -57,9 +80,10 @@ async function loadQueue() {
     row.querySelector(".approve").addEventListener("click", async () => {
       const item_id = row.querySelector(".ap-id").value.trim() || slugify(text);
       const emoji = row.querySelector(".ap-emoji").value.trim();
+      const category = row.querySelector(".ap-cat").value;
       const { status } = await api(`/api/admin/suggestions/${encodeURIComponent(sid)}/approve`, {
         method: "POST",
-        body: JSON.stringify({ item_id, name: text, emoji }),
+        body: JSON.stringify({ item_id, name: text, emoji, category }),
       });
       if (status === 200) { toast("אושר ✓"); refresh(); }
       else if (status === 409) toast("item-id כבר קיים");
@@ -75,28 +99,84 @@ async function loadQueue() {
 
 /* ---- items ---- */
 async function loadItems() {
-  const { status, body } = await api("/api/items");
+  const { status, body } = await api("/api/admin/items");
   if (status !== 200) return toast(`שגיאה בטעינת הפריטים (${status})`);
-  $("items").innerHTML = (body.items || [])
-    .map(
-      (i) => `<div class="row" data-id="${esc(i.id)}">
-        <span class="grow">${esc(i.emoji || "")} ${esc(i.name)}
-          <span class="muted">(${esc(i.id)} · ${i.votes_left}/${i.votes_right}/${i.votes_neutral})</span>
-        </span>
-        <button class="ghost archive">ארכוב</button>
-      </div>`
-    )
-    .join("");
-  for (const row of $("items").querySelectorAll(".row")) {
-    row.querySelector(".archive").addEventListener("click", async () => {
-      const { status } = await api(`/api/admin/items/${encodeURIComponent(row.dataset.id)}`, {
-        method: "PATCH",
-        body: JSON.stringify({ status: "archived" }),
-      });
-      if (status === 200) { toast("נשלח לארכיון"); refresh(); }
-      else toast(`שגיאה (${status})`);
+  const showArchived = $("show-archived").checked;
+  const items = (body.items || []).filter((i) => showArchived || i.status === "active");
+  const byCat = new Map(CATEGORIES.map((c) => [c.slug, []]));
+  for (const i of items) (byCat.get(i.category) || byCat.get("other")).push(i);
+
+  $("items").innerHTML = CATEGORIES.map((c) => {
+    const rows = byCat.get(c.slug) || [];
+    const inner = rows.length
+      ? rows.map((i) => itemRowHTML(i)).join("")
+      : '<div class="muted empty-cat">אין פריטים בקטגוריה הזו</div>';
+    return `<div class="cat-group">
+      <h3>${esc(c.label)} · ${rows.length}</h3>${inner}
+    </div>`;
+  }).join("");
+
+  for (const row of $("items").querySelectorAll(".row")) wireRow(row);
+}
+
+function itemRowHTML(i) {
+  return `<div class="row${i.status === "archived" ? " archived" : ""}" data-id="${esc(i.id)}">
+    <input class="ed-name grow" value="${esc(i.name)}">
+    <input class="ed-emoji" value="${esc(i.emoji || "")}" size="3">
+    ${catSelect(i.category, "ed-cat")}
+    <input type="file" class="ed-file" accept="image/*">
+    <span class="muted">${i.votes_left}/${i.votes_right}/${i.votes_neutral}</span>
+    <button class="save">שמירה</button>
+    <button class="ghost toggle">${i.status === "archived" ? "שחזור" : "ארכוב"}</button>
+  </div>`;
+}
+
+function wireRow(row) {
+  const id = row.dataset.id;
+  row.querySelector(".save").addEventListener("click", async () => {
+    const fields = {
+      name: row.querySelector(".ed-name").value.trim(),
+      emoji: row.querySelector(".ed-emoji").value.trim(),
+      category: row.querySelector(".ed-cat").value,
+    };
+    if (!fields.name) return toast("שם לא יכול להיות ריק");
+    const file = row.querySelector(".ed-file").files[0];
+    if (file) {
+      const { status, body } = await api(
+        `/api/admin/items/${encodeURIComponent(id)}/image`,
+        { method: "POST" }
+      );
+      if (status !== 200) return toast(`שגיאה בהעלאת תמונה (${status})`);
+      if (body.upload_url) {
+        const blob = await fileToWebp(file);
+        const up = await fetch(body.upload_url, {
+          method: "PUT",
+          headers: { "content-type": "image/webp" },
+          body: blob,
+        });
+        if (!up.ok) return toast("העלאת התמונה נכשלה");
+        fields.image_key = body.image_key;
+      } else {
+        toast("אין דלי תמונות מקומי — התמונה לא נשמרה");
+      }
+    }
+    const { status } = await api(`/api/admin/items/${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      body: JSON.stringify(fields),
     });
-  }
+    if (status === 200) { toast("נשמר ✓"); refresh(); }
+    else toast(`שגיאה (${status})`);
+  });
+
+  row.querySelector(".toggle").addEventListener("click", async () => {
+    const archived = row.classList.contains("archived");
+    const { status } = await api(`/api/admin/items/${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      body: JSON.stringify({ status: archived ? "active" : "archived" }),
+    });
+    if (status === 200) { toast(archived ? "שוחזר" : "נשלח לארכיון"); refresh(); }
+    else toast(`שגיאה (${status})`);
+  });
 }
 
 /* ---- create (with optional browser-side webp resize + presigned upload) ---- */
@@ -127,6 +207,7 @@ function initCreateForm() {
         item_id,
         name: $("c-name").value.trim(),
         emoji: $("c-emoji").value.trim(),
+        category: $("c-cat").value,
         want_image,
       }),
     });
@@ -166,6 +247,8 @@ function refresh() { loadQueue(); loadItems(); }
   }
   $("mode-badge").textContent = "LOCAL";
   $("admin-main").classList.remove("hidden");
+  $("show-archived").addEventListener("change", loadItems);
   initCreateForm();
+  await loadCategories();
   refresh();
 })();
