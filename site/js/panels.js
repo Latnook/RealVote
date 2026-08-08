@@ -103,7 +103,7 @@ function openMyVotes() {
   const panel = $("panel");
   panel.innerHTML = `
     <div class="panel-head">
-      <h2>ההצבעות שלי</h2>
+      <h2>תפריט</h2>
       <button class="iconbtn" id="panel-close" aria-label="סגירה">✕</button>
     </div>
     <section class="cat-section">
@@ -113,9 +113,12 @@ function openMyVotes() {
     <h3 class="myvotes-head">ההצבעות שלי</h3>
     ${rows || '<p style="margin-top:16px; color:var(--muted)">עוד לא הצבעת על כלום.</p>'}`;
   const applyCategories = () => {
-    const chosen = [...panel.querySelectorAll(".cat-box")]
-      .filter((b) => b.checked)
-      .map((b) => b.value);
+    const boxes = [...panel.querySelectorAll(".cat-box")];
+    if (boxes.length === 0) return; // panel opened before categories loaded — nothing to apply
+    const chosen = boxes.filter((b) => b.checked).map((b) => b.value);
+    const current = getCategories();
+    const same = chosen.length === current.length && chosen.every((s) => current.includes(s));
+    if (same) return;
     setCategories(chosen);
   };
   const close = openOverlay(panel, $("panel-close"), applyCategories);
