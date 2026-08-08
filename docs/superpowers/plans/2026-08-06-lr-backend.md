@@ -1,4 +1,4 @@
-# LR Backend & Local Platform — Implementation Plan (1 of 3)
+# RealVote Backend & Local Platform — Implementation Plan (1 of 3)
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 

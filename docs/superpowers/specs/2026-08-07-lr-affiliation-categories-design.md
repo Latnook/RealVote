@@ -1,4 +1,4 @@
-# LR — self-identification & categories — Design
+# RealVote — self-identification & categories — Design
 
 **Date:** 2026-08-07
 **Status:** Approved by Ariel (2026-08-07)

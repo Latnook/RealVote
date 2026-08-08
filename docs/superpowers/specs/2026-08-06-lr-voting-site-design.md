@@ -1,4 +1,4 @@
-# LR — "דברים שהם … בעיניי" voting site — Design
+# RealVote — "דברים שהם … בעיניי" voting site — Design
 
 > **Extended by** [`2026-08-07-lr-affiliation-categories-design.md`](2026-08-07-lr-affiliation-categories-design.md):
 > visitor self-identification with cross-attribution stats, item categories with visitor filters,
@@ -6,8 +6,8 @@
 
 **Date:** 2026-08-06
 **Status:** Approved by Ariel (UX 2026-08-06, data/API 2026-08-06, infra 2026-08-06)
-**Working name:** `lr` → site at `lr.latnook.com` (placeholder; subdomain is a Terraform
-variable, renameable any time with one line + apply).
+**Name:** RealVote → site at `realvote.latnook.com` (chosen 2026-08-07; the subdomain is a
+Terraform variable). Earlier drafts used the placeholder `lr`, which survives in file names.
 
 ## 1. What this is
 

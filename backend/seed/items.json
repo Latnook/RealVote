@@ -412,5 +412,23 @@
     "name": "ספה עם כיסוי",
     "emoji": "🛋️",
     "category": "home"
+  },
+  {
+    "id": "lotr",
+    "name": "שר הטבעות",
+    "emoji": "🧝",
+    "category": "movies"
+  },
+  {
+    "id": "avatar",
+    "name": "אווטאר",
+    "emoji": "🌌",
+    "category": "movies"
+  },
+  {
+    "id": "the-matrix",
+    "name": "המטריקס",
+    "emoji": "💊",
+    "category": "movies"
   }
 ]
