@@ -74,7 +74,8 @@ body {
    artwork whose ink is dark enough to disappear against it — currently only the
    Goldstar wordmark, which is black on transparent. If more of these turn up, promote
    this to a per-item flag from the API rather than growing a list of ids here. */
-.card[data-item="goldstar-beer"] .media { background: var(--plate); }
+.card[data-item="goldstar-beer"] .media,
+.card[data-item="sport-channel"] .media { background: var(--plate); }
 .media img {
   display: block;
   max-width: min(64vw, 260px); max-height: min(42vw, 170px);
