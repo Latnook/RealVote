@@ -1,0 +1,6 @@
+# Copy to backend.hcl (gitignored) and run:
+#   terraform init -backend-config=backend.hcl
+bucket = "voteball-tfstate-590183895228"
+key    = "realvote/terraform.tfstate"
+region = "il-central-1"
+encrypt = true
