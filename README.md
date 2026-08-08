@@ -111,8 +111,10 @@ node scripts/check-crosstab.mjs           # boundary checks for the cross-attrib
 Items are seeded from [`backend/seed/items.json`](backend/seed/items.json) and managed from
 `/admin/`, where each row can be renamed, re-filed, given a picture, archived and restored.
 
-For bulk work there's a spreadsheet flow: fill the `image_url` column of `images.csv` (a URL or a
-local path) and run
+The pictures themselves are **not in this repository** — `images.csv` records where each one came
+from, so a fresh clone can fetch them. Items without a picture fall back to a large emoji.
+
+For bulk work: fill the `image_url` column of `images.csv` (a URL or a local path) and run
 
 ```bash
 ./scripts/add-image.py --from-csv images.csv     # --missing shows what still needs one

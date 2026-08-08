@@ -4,6 +4,7 @@ body { background: var(--bg); color: var(--ink); font-family: var(--font); paddi
 .topbar { display: flex; justify-content: space-between; align-items: baseline; padding: 14px 16px 0; }
 .wordmark { font-size: 16px; font-weight: 900; }
 .dot { background: linear-gradient(90deg, var(--left-a), var(--left-b)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.brand { font-size: 10px; font-weight: 700; letter-spacing: 1.5px; color: var(--muted); }
 .badge { font-size: 11px; font-weight: 700; color: var(--muted); letter-spacing: 1px; }
 .rule { border-top: 2px solid var(--ink); margin: 10px 16px 0; }
 main { max-width: 720px; margin: 0 auto; padding: 0 16px; }

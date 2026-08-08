@@ -131,20 +131,6 @@ export async function initDeck() {
   }
 }
 
-function updateChrome() {
-  const inScope = state.items.filter(inSelection);
-  const total = inScope.length;
-  if (total === 0) {
-    document.getElementById("counter").textContent = "–/–";
-    document.getElementById("ghost").textContent = "–";
-    return;
-  }
-  const done = inScope.filter((i) => i.id in state.votes).length;
-  const pos = Math.min(done + 1, total);
-  document.getElementById("counter").textContent =
-    `${String(pos).padStart(2, "0")}/${String(total).padStart(2, "0")}`;
-  document.getElementById("ghost").textContent = String(pos).padStart(2, "0");
-}
 
 function mediaHTML(item) {
   if (item.image_key) {
@@ -171,7 +157,6 @@ function showNextCard() {
     return;
   }
   if (affq.shouldAsk(state)) {
-    updateChrome();
     state.revealed = false;
     affq.renderQuestion(area(), (affiliation) => {
       if (affiliation) state.affiliation = affiliation;
@@ -184,7 +169,6 @@ function showNextCard() {
   if (state.selected) {
     const inScope = state.items.filter(inSelection);
     if (state.selected.size === 0 || inScope.length === 0) {
-      updateChrome();
       state.current = null;
       area().innerHTML = `
         <div class="endscreen">
@@ -215,7 +199,6 @@ function showNextCard() {
     return;
   }
   state.current = state.queue[0];
-  updateChrome();
   area().innerHTML = cardHTML(state.byId.get(state.current));
 }
 
