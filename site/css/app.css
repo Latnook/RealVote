@@ -204,3 +204,13 @@ body {
 @media (max-width: 899px) {
   .edge { display: none; }
 }
+
+.xt-line {
+  margin-top: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+  color: var(--ink);
+  border-top: 1px solid var(--muted);
+  padding-top: 8px;
+}

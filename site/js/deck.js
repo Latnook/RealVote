@@ -1,4 +1,5 @@
 import { getItems, getMe, vote } from "./api.js";
+import { crossAttributionLines } from "./crosstab.js";
 
 const esc = (s) =>
   String(s)
@@ -17,6 +18,9 @@ const state = {
   current: null,        // item id on screen
   revealed: false,
   viewingBack: false,
+  affiliation: null,     // "right" | "left" | "center" | null
+  allCategories: [],     // [{slug,label}] from the API
+  selected: null,        // Set of selected slugs; null means "all"
 };
 
 const emptyCbs = [], votesCbs = [];
@@ -35,6 +39,42 @@ function shuffle(arr) {
     [arr[i], arr[j]] = [arr[j], arr[i]];
   }
   return arr;
+}
+
+const CATS_KEY = "lr_cats";
+
+function loadSelected() {
+  try {
+    const raw = localStorage.getItem(CATS_KEY);
+    return raw ? new Set(JSON.parse(raw)) : null;
+  } catch {
+    return null;
+  }
+}
+
+export const getAllCategories = () => state.allCategories;
+export const getCategories = () =>
+  state.selected ? [...state.selected] : state.allCategories.map((c) => c.slug);
+
+export function setCategories(slugs) {
+  state.selected = new Set(slugs);
+  try {
+    localStorage.setItem(CATS_KEY, JSON.stringify([...state.selected]));
+  } catch {
+    /* private mode: filter still applies for this session */
+  }
+  rebuildQueue();
+  showNextCard();
+}
+
+function inSelection(item) {
+  return !state.selected || state.selected.has(item.category);
+}
+
+function rebuildQueue() {
+  state.queue = shuffle(
+    state.items.filter((i) => inSelection(i) && !(i.id in state.votes)).map((i) => i.id)
+  );
 }
 
 function renderLoadError() {
@@ -60,7 +100,10 @@ export async function initDeck() {
   state.items = itemsResp.body.items || [];
   state.byId = new Map(state.items.map((i) => [i.id, i]));
   state.votes = meResp.body.votes || {};
-  state.queue = shuffle(state.items.filter((i) => !(i.id in state.votes)).map((i) => i.id));
+  state.allCategories = itemsResp.body.categories || [];
+  state.affiliation = meResp.body.affiliation || null;
+  state.selected = loadSelected();
+  rebuildQueue();
   votesCbs.forEach((cb) => cb());
   showNextCard();
   if (isLocal && new URLSearchParams(location.search).get("e2e") === "vote") {
@@ -69,8 +112,9 @@ export async function initDeck() {
 }
 
 function updateChrome() {
-  const total = state.items.length;
-  const done = Object.keys(state.votes).length;
+  const inScope = state.items.filter(inSelection);
+  const total = inScope.length;
+  const done = inScope.filter((i) => i.id in state.votes).length;
   const pos = Math.min(done + 1, total);
   document.getElementById("counter").textContent =
     `${String(pos).padStart(2, "0")}/${String(total).padStart(2, "0")}`;
@@ -97,6 +141,15 @@ function cardHTML(item) {
 function showNextCard() {
   state.revealed = false;
   state.viewingBack = false;
+  if (state.selected && state.selected.size === 0) {
+    state.current = null;
+    area().innerHTML = `
+      <div class="endscreen">
+        <h2>בחרו לפחות קטגוריה אחת<span class="dot">.</span></h2>
+        <p class="summary">פתחו את התפריט ובחרו קטגוריות</p>
+      </div>`;
+    return;
+  }
   if (state.queue.length === 0) {
     state.current = null;
     if (state.items.length === 0) {
@@ -121,6 +174,8 @@ function revealHTML(item, myChoice) {
   const pctL = lr ? Math.round((100 * l) / lr) : 50;
   const pctR = lr ? 100 - pctL : 50;
   const mark = (side) => (myChoice === side ? " ✓ הצבעת" : "");
+  const xtLines = state.affiliation ? crossAttributionLines(item) : [];
+  const xtHTML = xtLines.map((l) => `<div class="xt-line">${esc(l)}</div>`).join("");
   return `
     <div class="bar"><div class="bar-left"></div><div class="bar-right"></div></div>
     <div class="stats">
@@ -128,6 +183,7 @@ function revealHTML(item, myChoice) {
       <span class="left-side">שמאלני ${pctL}% · ${l.toLocaleString("he")} קולות${mark("left")}</span>
     </div>
     <div class="neutral-count">🤷 ${n.toLocaleString("he")} ניטרלי${mark("neutral")}</div>
+    ${xtHTML}
     <div class="reveal-actions">
       <button class="primary" id="btn-next">הבא</button>
       <button class="secondary" id="btn-back">חזרה</button>
