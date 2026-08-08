@@ -20,3 +20,6 @@ deploy.env
 __pycache__/
 *.pyc
 .venv/
+
+# Item pictures added locally (they belong in S3; the CSV records where they came from)
+site/img/

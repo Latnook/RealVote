@@ -33,6 +33,7 @@ image on one origin with one cache policy.
 """
 
 import argparse
+import csv
 import json
 import pathlib
 import re
@@ -188,6 +189,63 @@ def attach(base, items, item_id, src, tmpdir=None):
     return True
 
 
+CSV_FIELDS = ["id", "name", "category", "emoji", "current_image", "image_url", "notes"]
+
+
+def make_csv(path, items):
+    """A fill-in-the-blanks sheet: one row per item, image_url left empty.
+
+    Written UTF-8 with a BOM so Excel renders the Hebrew instead of mojibake;
+    LibreOffice and the reader below are both happy either way.
+    """
+    rows = sorted(items.values(), key=lambda i: (i["category"], i["id"]))
+    with path.open("w", encoding="utf-8-sig", newline="") as fh:
+        w = csv.DictWriter(fh, fieldnames=CSV_FIELDS)
+        w.writeheader()
+        for i in rows:
+            w.writerow({
+                "id": i["id"],
+                "name": i["name"],
+                "category": i["category"],
+                "emoji": i.get("emoji", ""),
+                "current_image": i.get("image_key", ""),
+                "image_url": "",
+                "notes": "",
+            })
+    print(f"wrote {path} — {len(rows)} rows")
+    print("Fill the image_url column (a URL or a local file path) and run:")
+    print(f"  ./scripts/add-image.py --from-csv {path}")
+
+
+def read_csv(path, items):
+    """Return [(item_id, source)] for rows with a non-empty image_url."""
+    with path.open(encoding="utf-8-sig", newline="") as fh:
+        reader = csv.DictReader(fh)
+        if not reader.fieldnames or "id" not in reader.fieldnames or "image_url" not in reader.fieldnames:
+            sys.exit(f"{path}: needs at least 'id' and 'image_url' columns "
+                     f"(found: {reader.fieldnames})")
+        pairs, unknown, blank = [], [], 0
+        for lineno, row in enumerate(reader, 2):
+            iid = (row.get("id") or "").strip()
+            src = (row.get("image_url") or "").strip()
+            if not iid:
+                continue
+            if not src:
+                blank += 1
+                continue
+            if iid not in items:
+                unknown.append(f"line {lineno}: {iid}")
+                continue
+            pairs.append((iid, src))
+    if unknown:
+        print(f"skipping {len(unknown)} row(s) with an unknown item id:")
+        for u in unknown[:10]:
+            print(f"  {u}")
+    if blank:
+        print(f"{blank} row(s) have no image_url yet — left alone")
+    return pairs
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("item_id", nargs="?", help="item id to attach the picture to")
@@ -196,11 +254,19 @@ def main():
                     help="attach every file in DIR whose name matches an item id")
     ap.add_argument("--from-list", type=pathlib.Path, metavar="FILE",
                     help="lines of 'item-id  source', source = file path or URL")
+    ap.add_argument("--make-csv", type=pathlib.Path, metavar="FILE",
+                    help="write a spreadsheet of every item with a blank image_url column")
+    ap.add_argument("--from-csv", type=pathlib.Path, metavar="FILE",
+                    help="attach images listed in the image_url column of that spreadsheet")
     ap.add_argument("--missing", action="store_true", help="list items with no picture and exit")
     ap.add_argument("--base", default="http://localhost:8080", help="local server base URL")
     args = ap.parse_args()
 
     items = load_items(args.base)
+
+    if args.make_csv:
+        make_csv(args.make_csv, items)
+        return
 
     if args.missing:
         gaps = [i for i in items.values() if not i.get("image_key") and i["status"] == "active"]
@@ -242,8 +308,21 @@ def main():
             print(f"\nattached {ok}/{len(pairs)}")
             return
 
+        if args.from_csv:
+            pairs = read_csv(args.from_csv, items)
+            if not pairs:
+                print("nothing to attach — no rows have an image_url filled in")
+                return
+            print(f"\nattaching {len(pairs)} image(s):")
+            ok = sum(attach(args.base, items, iid, src, tmp) for iid, src in pairs)
+            print(f"\nattached {ok}/{len(pairs)}")
+            if ok < len(pairs):
+                print("re-run after fixing the failures above; successful rows are safe to re-run too")
+            return
+
         if not args.item_id or not args.image:
-            ap.error("give an item id and an image, or use --batch / --from-list / --missing")
+            ap.error("give an item id and an image, or use "
+                     "--make-csv / --from-csv / --batch / --from-list / --missing")
         attach(args.base, items, args.item_id, args.image, tmp)
 
 
