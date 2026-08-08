@@ -97,28 +97,35 @@ Steps 3–4 are best-effort: a crash mid-back-fill leaves some of that visitor's
 uncounted in the cross-tabs. Accepted — these are approximate display statistics, the claim in
 step 1 is what must be exact, and it is.
 
-### 1.4 Display rule
+### 1.4 Display rule — cross-attribution only
 
-The reveal gains two slim bars (ימנים row, שמאלנים row) beneath the existing bar **only when all**
-of the following hold:
+No bars and no symmetric comparison. The reveal gains **a single sentence**, and only in the one
+genuinely interesting case: **a camp overwhelmingly assigning an item to the opposite camp.**
 
-1. the viewer has an affiliation (has answered), **and**
-2. `xt_right_left + xt_right_right ≥ XT_MIN_CAMP_VOTES` (25), **and**
-3. `xt_left_left + xt_left_right ≥ XT_MIN_CAMP_VOTES` (25), **and**
-4. `|pctLeft(right camp) − pctLeft(left camp)| ≥ XT_MIN_GAP_POINTS` (15)
+For each camp `C ∈ {right, left}` independently, with `decisive_C = xt_C_left + xt_C_right`
+(neutral excluded, matching the main bar):
 
-where `pctLeft(camp) = xt_<camp>_left / (xt_<camp>_left + xt_<camp>_right)`, i.e. neutral votes are
-excluded from the percentage exactly as they are from the main bar. Thresholds live in one
-`const` block in the frontend; the rule itself is a single pure function so it can be reasoned about
-and unit-checked in isolation.
+| Camp | Shown when | Line |
+|---|---|---|
+| ימנים | `decisive_right ≥ 25` **and** `xt_right_left / decisive_right > 0.70` | `NN% מהימנים חושבים שזה שמאלני` |
+| שמאלנים | `decisive_left ≥ 25` **and** `xt_left_right / decisive_left > 0.70` | `NN% מהשמאלנים חושבים שזה ימני` |
+
+Gated additionally on the viewer having answered the identity question.
+
+The two lines are evaluated independently and **both may appear at once** — each camp disowning the
+item onto the other, which is the strongest result the site can produce. A camp claiming an item as
+its *own* is never shown: it carries no tension.
+
+Constants (`XT_MIN_CAMP_VOTES = 25`, `XT_CROSS_THRESHOLD = 0.70`) live in one `const` block in the
+frontend, and the rule is a single pure function so it can be reasoned about and checked against
+boundary inputs in isolation.
 
 Otherwise the reveal renders exactly as it does today. `center`-identified voters are counted
-(`xt_center_*`) but not displayed; the data is retained for possible later use.
+(`xt_center_*`) but never displayed; the data is retained for possible later use.
 
-Copy for the two rows: `ימנים · NN% אמרו שמאלני` and `שמאלנים · NN% אמרו שמאלני`.
-
-**Expected behaviour on a fresh site:** nothing qualifies until items accumulate ~50 camp-attributed
-votes. The feature switches itself on as traffic arrives. This is intended, not a defect.
+**Expected behaviour on a fresh site:** nothing qualifies until a camp accumulates 25 decisive votes
+on an item *and* lands above 70% cross-attribution. The feature switches itself on as traffic
+arrives. This is intended, not a defect.
 
 ### 1.5 The card's own reveal
 
@@ -219,10 +226,11 @@ can retry; a `409` (already answered in another tab) is treated as success — t
 - category validation on create / approve / patch; unknown slug → `400`; default `other`;
 - `/api/items` includes `category`, `xt_*`, and the `categories` list.
 
-**Frontend:** headless-Chromium screenshots for the question card, its reveal, a qualifying cross-tab
-reveal (seeded to exceed the thresholds), the category filter panel, and the filtered-empty state;
-console-hygiene greps; the significance rule exercised as a pure function against boundary inputs
-(24 vs 25 votes, 14 vs 15 points).
+**Frontend:** headless-Chromium screenshots for the question card, its reveal, a qualifying
+cross-attribution reveal (seeded to exceed the thresholds), a both-camps-disown reveal (both lines
+at once), the category filter panel, and the filtered-empty state; console-hygiene greps; the
+cross-attribution rule exercised as a pure function against boundary inputs (24 vs 25 decisive
+votes; 70.0% vs 70.1%; a camp claiming the item as its own → no line).
 
 ## 6. Out of scope
 
