@@ -28,6 +28,22 @@ resource "aws_cloudfront_cache_policy" "api_items" {
   }
 }
 
+resource "aws_cloudfront_function" "dir_index" {
+  name    = "${var.project}-dir-index"
+  runtime = "cloudfront-js-2.0"
+  comment = "Append index.html to directory URIs; S3 origins have no directory index."
+  publish = true
+  code    = <<-JS
+    function handler(event) {
+      var req = event.request;
+      if (req.uri.endsWith("/")) {
+        req.uri += "index.html";
+      }
+      return req;
+    }
+  JS
+}
+
 resource "aws_cloudfront_response_headers_policy" "img" {
   name = "${var.project}-img"
   security_headers_config {
@@ -73,6 +89,15 @@ resource "aws_cloudfront_distribution" "site" {
     cached_methods         = ["GET", "HEAD"]
     cache_policy_id        = "658327ea-f89d-4fab-a63d-7e88639e58f6" # Managed-CachingOptimized
     compress               = true
+
+    # S3 origins have no directory index, so /admin/ would 404 on the key "admin/"
+    # without this. Attached ONLY here — never on /img/* or /api/* — so it can't
+    # rewrite /admin/config.json (no trailing slash) into an index fetch; that path
+    # must still 404 when absent.
+    function_association {
+      event_type   = "viewer-request"
+      function_arn = aws_cloudfront_function.dir_index.arn
+    }
   }
 
   ordered_cache_behavior {

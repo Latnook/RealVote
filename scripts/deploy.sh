@@ -10,7 +10,7 @@ if [ ! -f terraform/realvote.tfvars ]; then
 fi
 
 echo "==> terraform apply"
-$TF init -backend-config=backend.hcl -upgrade >/dev/null
+$TF init -backend-config=backend.hcl >/dev/null
 $TF apply -var-file=realvote.tfvars "$@"
 
 BUCKET=$($TF output -raw bucket)
@@ -29,11 +29,16 @@ cat > site/admin/config.json <<JSON
 JSON
 
 echo "==> syncing site/ to s3://$BUCKET"
-# Long cache for fingerprinted-by-content assets, short for HTML and config so a
-# redeploy is visible immediately even before the invalidation lands.
+# css/js are NOT fingerprinted-by-content (no hash in the filename), so a returning
+# browser could pair fresh HTML with a stale cached module. Keep edges long-cached
+# (s-maxage) but make browsers revalidate within minutes (max-age); short cache for
+# HTML and config so a redeploy is visible immediately even before the invalidation
+# lands. img/ is excluded from --delete because it's gitignored and holds
+# admin-uploaded pictures that don't exist in the local site/ tree — without this
+# exclude, every deploy would wipe the bucket's uploaded images.
 aws s3 sync site/ "s3://$BUCKET/" --delete \
-  --exclude "*.html" --exclude "admin/config.json" \
-  --cache-control "public,max-age=86400"
+  --exclude "*.html" --exclude "admin/config.json" --exclude "img/*" \
+  --cache-control "public,max-age=300,s-maxage=86400"
 aws s3 sync site/ "s3://$BUCKET/" \
   --exclude "*" --include "*.html" --include "admin/config.json" \
   --cache-control "no-cache"

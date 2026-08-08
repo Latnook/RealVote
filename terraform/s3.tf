@@ -30,20 +30,10 @@ resource "aws_s3_bucket_cors_configuration" "site" {
   }
 }
 
-# Replacing a picture writes a new timestamped key, so superseded objects accumulate.
-resource "aws_s3_bucket_lifecycle_configuration" "site" {
-  bucket = aws_s3_bucket.site.id
-  rule {
-    id     = "expire-noncurrent-images"
-    status = "Enabled"
-    filter {
-      prefix = "img/"
-    }
-    noncurrent_version_expiration {
-      noncurrent_days = 30
-    }
-  }
-}
+# No lifecycle rule here: the bucket is unversioned and replacing a picture writes a
+# brand-new timestamped key rather than overwriting the old one in place, so every
+# object is always "current" — a noncurrent_version_expiration rule would never match
+# anything. Superseded images accumulate under img/ by design; clean up is manual.
 
 # Only this distribution may read the bucket.
 resource "aws_s3_bucket_policy" "site" {

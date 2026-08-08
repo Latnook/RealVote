@@ -300,6 +300,10 @@ function enterAdmin(idToken) {
 
 /* ---- boot: auth seam ---- */
 (async () => {
+  // Wired once, unconditionally: #show-archived exists in the DOM regardless of
+  // mode, so both LOCAL and CLOUD boot paths need this listener.
+  $("show-archived").addEventListener("change", loadItems);
+
   const cfg = await fetch("/admin/config.json").then((r) => (r.ok ? r.json() : null)).catch(() => null);
   if (cfg) {
     initCloud(cfg);
@@ -307,7 +311,6 @@ function enterAdmin(idToken) {
   }
   $("mode-badge").textContent = "LOCAL";
   $("admin-main").classList.remove("hidden");
-  $("show-archived").addEventListener("change", loadItems);
   initCreateForm();
   await loadCategories();
   refresh();

@@ -14,6 +14,8 @@ data "archive_file" "lambda" {
     "requirements-dev.txt",
     "seed.py",
     "seed_crosstab.py",
+    "app/__pycache__",
+    "__pycache__",
   ]
 }
 

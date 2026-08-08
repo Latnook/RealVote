@@ -2,7 +2,7 @@ backend.hcl
 *.tfvars
 !*.tfvars.example
 .terraform/
-.terraform.lock.hcl
 *.tfstate
 *.tfstate.*
 lambda.zip
+tfplan

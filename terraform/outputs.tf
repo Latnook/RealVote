@@ -25,3 +25,7 @@ output "user_pool_client_id" {
 output "region" {
   value = var.region
 }
+
+output "table_name" {
+  value = aws_dynamodb_table.main.name
+}
