@@ -56,7 +56,31 @@ class Handler(SimpleHTTPRequestHandler):
         self._maybe_api(lambda: self.send_error(405))
 
 
+def _lan_ip():
+    """Best-effort LAN address, for printing a URL a phone can reach."""
+    import socket
+
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        s.connect(("1.1.1.1", 80))  # no packets sent; just picks the default route
+        return s.getsockname()[0]
+    except OSError:
+        return None
+    finally:
+        s.close()
+
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", "8080"))
+    # Loopback by default. HOST=0.0.0.0 exposes the site to the LAN — and with
+    # ALLOW_ADMIN=1 that means an unauthenticated admin API, so only do it on a
+    # network you trust.
+    host = os.environ.get("HOST", "127.0.0.1")
     print(f"http://localhost:{port}  (site from {SITE_DIR}, /api/* → lambda_handler)")
-    ThreadingHTTPServer(("127.0.0.1", port), Handler).serve_forever()
+    if host not in ("127.0.0.1", "localhost"):
+        ip = _lan_ip()
+        if ip:
+            print(f"http://{ip}:{port}  ← from other devices on this network")
+        if os.environ.get("ALLOW_ADMIN") == "1":
+            print("WARNING: ALLOW_ADMIN=1 and bound beyond loopback — /admin/ is open to the LAN.")
+    ThreadingHTTPServer((host, port), Handler).serve_forever()
