@@ -181,12 +181,37 @@ exists and already traps focus / closes on Escape — the section is added insid
   categories — a consequence of filtering, called out here because two visitors can legitimately
   finish "the whole site" with different denominators.
 
-### 2.4 Admin
+### 2.4 Admin — item management
 
-- Create-item form: category `<select>`, required, defaulting to `אחר`.
-- Approve row: same `<select>` alongside the existing item-id / emoji inputs.
-- `PATCH /api/admin/items/<id>` accepts `category`, so existing items can be re-filed.
-- The items list shows each item's category label.
+The admin page as built can only create, approve/reject, and archive. That is too thin for
+populating a catalogue, and archiving is currently a one-way trapdoor (archived items disappear from
+the only listing that exists). This design fixes both.
+
+**Create-item form:** gains a category `<select>`, required, defaulting to `אחר`. After a successful
+create the form clears and refocuses its first field, so items can be added in quick succession.
+
+**Approve row:** same category `<select>` alongside the existing item-id / emoji inputs.
+
+**Items list — grouped and editable.** The list is grouped by category with a count per group
+(`אוכל · 7`), including a group for every category that currently has **zero** items, so gaps are
+visible while populating. Each row is editable in place:
+
+| Control | Behaviour |
+|---|---|
+| name (text) | rename |
+| emoji (text) | change fallback emoji |
+| category (select) | re-file into another category |
+| image (file) | upload or replace; resized to WebP in the browser as today |
+| `שמירה` | `PATCH`es only the changed fields; row shows a saved/failed toast |
+| `ארכוב` / `שחזור` | toggles `status` between `active` and `archived` — reversible in both directions |
+
+Archived items are listed (visually dimmed, grouped as today) so they can be restored; a
+`הצג בארכיון` checkbox hides them by default to keep the list short.
+
+**Image keys become timestamped** — `img/<item_id>-<epoch>.webp` rather than `img/<item_id>.webp`.
+Replacing an image therefore writes a new object at a new key, so a CDN never serves a stale
+picture and no cache invalidation is needed on image replacement. Superseded objects remain in S3
+(bytes are negligible; an S3 lifecycle rule can prune them later if it ever matters).
 
 ### 2.5 Seed content
 
@@ -202,9 +227,11 @@ items and populate the remaining categories through the admin UI.
 | `GET /api/items` | each item gains `category` and the nine `xt_*` counters; response gains a top-level `categories: [{slug, label}]`. Still CDN-cacheable ~30s (identical for all visitors). |
 | `GET /api/me` | gains `affiliation`: `"right" \| "left" \| "center" \| null`. Never cached. |
 | `POST /api/affiliation` | **new.** Body `{choice}` → `200 {affiliation, stats:{right,left,center}}`; `409` if already answered; `400` on an invalid choice. Sets the uid cookie if absent, like the other write routes. |
-| `POST /api/admin/items` | accepts `category` (validated against the list; defaults `other`). |
+| `POST /api/admin/items` | accepts `category` (validated against the list; defaults `other`); image key is now `img/<id>-<epoch>.webp`. |
 | `POST /api/admin/suggestions/<sid>/approve` | accepts `category` (same validation/default). |
-| `PATCH /api/admin/items/<id>` | accepts `category` in the field whitelist. |
+| `PATCH /api/admin/items/<id>` | accepts `category` in the field whitelist; `status` may move in **both** directions (`active` ⇄ `archived`). |
+| `GET /api/admin/items` | **new.** All items including archived, for the admin listing → `{"items":[…]}`. Never cached. (The public `GET /api/items` continues to return active items only.) |
+| `POST /api/admin/items/<id>/image` | **new.** Verifies the item exists, mints `img/<id>-<epoch>.webp`, returns `{image_key, upload_url}` (presigned PUT, 300s, `image/webp`). The client uploads, then `PATCH`es `image_key` — so a failed upload never leaves a broken reference. `404` for an unknown item; `{upload_url: null}` when no image bucket is configured (local mode). |
 
 Response-shape additions are backward-compatible; no existing key changes meaning.
 
@@ -224,7 +251,11 @@ can retry; a `409` (already answered in another tab) is treated as success — t
 - global `affil_*` counters tally;
 - `/api/me` returns the affiliation (and `null` before answering);
 - category validation on create / approve / patch; unknown slug → `400`; default `other`;
-- `/api/items` includes `category`, `xt_*`, and the `categories` list.
+- `/api/items` includes `category`, `xt_*`, and the `categories` list;
+- `GET /api/admin/items` returns archived items too, while `GET /api/items` still does not;
+- `PATCH` can restore an archived item to `active`;
+- `POST /api/admin/items/<id>/image` returns a timestamped key for an existing item, `404` for an
+  unknown one, and `upload_url: null` with no bucket configured.
 
 **Frontend:** headless-Chromium screenshots for the question card, its reveal, a qualifying
 cross-attribution reveal (seeded to exceed the thresholds), a both-camps-disown reveal (both lines
@@ -234,6 +265,8 @@ votes; 70.0% vs 70.1%; a camp claiming the item as its own → no line).
 
 ## 6. Out of scope
 
-Changing an answered affiliation; showing the `center` row in cross-tabs; per-category statistics
-pages; multi-category items; server-side computation of the significance rule; category management
-through the UI (the list is code).
+Changing an answered affiliation; showing `center` in cross-attribution lines; per-category
+statistics pages; multi-category items; server-side computation of the cross-attribution rule;
+category management through the UI (the list is code); **bulk item import** (considered and
+declined — items are added through the create form one at a time); deleting items outright
+(archiving is the reversible substitute).
