@@ -374,7 +374,43 @@
   {
     "id": "puccivelli",
     "name": "פוצ'יוולי",
-    "emoji": "🍸",
-    "category": "social"
+    "emoji": "🏐",
+    "category": "sport"
+  },
+  {
+    "id": "goldstar-beer",
+    "name": "בירה גולדסטאר",
+    "emoji": "🍺",
+    "category": "food"
+  },
+  {
+    "id": "borekas",
+    "name": "בורקס",
+    "emoji": "🥟",
+    "category": "food"
+  },
+  {
+    "id": "elal-only",
+    "name": "לטוס רק עם אל על",
+    "emoji": "🛫",
+    "category": "travel"
+  },
+  {
+    "id": "roladin",
+    "name": "רולדין",
+    "emoji": "🥐",
+    "category": "consumer"
+  },
+  {
+    "id": "sport-channel",
+    "name": "ערוץ הספורט",
+    "emoji": "📡",
+    "category": "tv"
+  },
+  {
+    "id": "covered-sofa",
+    "name": "ספה עם כיסוי",
+    "emoji": "🛋️",
+    "category": "home"
   }
 ]
