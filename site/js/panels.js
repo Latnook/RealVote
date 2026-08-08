@@ -1,4 +1,11 @@
-import { getState, onDeckEmpty, onVotesChanged } from "./deck.js";
+import {
+  getState,
+  onDeckEmpty,
+  onVotesChanged,
+  getAllCategories,
+  getCategories,
+  setCategories,
+} from "./deck.js";
 import { suggest } from "./api.js";
 
 const $ = (id) => document.getElementById(id);
@@ -18,6 +25,14 @@ export function initPanels() {
   onVotesChanged(updateFab);
   onDeckEmpty(showEndScreen);
   updateFab();
+  if (
+    ["localhost", "127.0.0.1"].includes(location.hostname) &&
+    new URLSearchParams(location.search).get("e2e") === "panel"
+  ) {
+    // wait for initDeck's data load (items/categories arrive via onVotesChanged)
+    // before rendering, rather than opening an empty panel synchronously here.
+    onVotesChanged(openMyVotes);
+  }
 }
 
 function showToast(msg) {
@@ -65,6 +80,17 @@ function crowdLine(item, mine) {
 
 function openMyVotes() {
   const { items, votes } = getState();
+  const selected = new Set(getCategories());
+  const catRows = getAllCategories()
+    .map(
+      (c) => `<label class="cat-row">
+        <input type="checkbox" class="cat-box" value="${esc(c.slug)}"${
+          selected.has(c.slug) ? " checked" : ""
+        }>
+        <span>${esc(c.label)}</span>
+      </label>`
+    )
+    .join("");
   const rows = items
     .filter((i) => i.id in votes)
     .map(
@@ -80,8 +106,19 @@ function openMyVotes() {
       <h2>ההצבעות שלי</h2>
       <button class="iconbtn" id="panel-close" aria-label="סגירה">✕</button>
     </div>
+    <section class="cat-section">
+      <h3>קטגוריות</h3>
+      <div class="cat-list">${catRows}</div>
+    </section>
+    <h3 class="myvotes-head">ההצבעות שלי</h3>
     ${rows || '<p style="margin-top:16px; color:var(--muted)">עוד לא הצבעת על כלום.</p>'}`;
-  const close = openOverlay(panel, $("panel-close"));
+  const applyCategories = () => {
+    const chosen = [...panel.querySelectorAll(".cat-box")]
+      .filter((b) => b.checked)
+      .map((b) => b.value);
+    setCategories(chosen);
+  };
+  const close = openOverlay(panel, $("panel-close"), applyCategories);
   $("panel-close").addEventListener("click", close);
 }
 
