@@ -15,3 +15,5 @@ export const vote = (item_id, choice) =>
   req("/api/vote", { method: "POST", body: JSON.stringify({ item_id, choice }) });
 export const suggest = (text) =>
   req("/api/suggest", { method: "POST", body: JSON.stringify({ text }) });
+export const setAffiliation = (choice) =>
+  req("/api/affiliation", { method: "POST", body: JSON.stringify({ choice }) });

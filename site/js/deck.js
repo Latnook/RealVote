@@ -1,5 +1,6 @@
 import { getItems, getMe, vote } from "./api.js";
 import { crossAttributionLines } from "./crosstab.js";
+import * as affq from "./affiliation.js";
 
 const esc = (s) =>
   String(s)
@@ -27,7 +28,7 @@ const emptyCbs = [], votesCbs = [];
 let submitting = false;
 export const onDeckEmpty = (cb) => emptyCbs.push(cb);
 export const onVotesChanged = (cb) => votesCbs.push(cb);
-export const isRevealed = () => state.revealed;
+export const isRevealed = () => state.revealed || affq.isRevealed();
 export const getState = () => state;
 
 const area = () => document.getElementById("card-area");
@@ -104,6 +105,10 @@ export async function initDeck() {
   state.affiliation = meResp.body.affiliation || null;
   state.selected = loadSelected();
   rebuildQueue();
+  if (isLocal && new URLSearchParams(location.search).get("e2e") === "affq") {
+    try { localStorage.setItem("lr_affq_at", "0"); } catch { /* ignore */ }
+    state.affiliation = null;
+  }
   votesCbs.forEach((cb) => cb());
   showNextCard();
   if (isLocal && new URLSearchParams(location.search).get("e2e") === "vote") {
@@ -139,6 +144,14 @@ function cardHTML(item) {
 }
 
 function showNextCard() {
+  if (affq.shouldAsk(state)) {
+    state.revealed = false;
+    affq.renderQuestion(area(), (affiliation) => {
+      if (affiliation) state.affiliation = affiliation;
+      showNextCard();
+    });
+    return;
+  }
   state.revealed = false;
   state.viewingBack = false;
   if (state.selected) {
@@ -161,6 +174,13 @@ function showNextCard() {
           <h2>אין פריטים כרגע<span class="dot">.</span></h2>
           <p class="summary">חזרו בקרוב — פריטים חדשים נוספים כל הזמן</p>
         </div>`;
+      return;
+    }
+    if (!state.affiliation) {
+      affq.renderQuestion(area(), (affiliation) => {
+        if (affiliation) state.affiliation = affiliation;
+        showNextCard();
+      });
       return;
     }
     emptyCbs.forEach((cb) => cb());
@@ -214,6 +234,15 @@ function renderReveal(item, myChoice) {
 }
 
 export async function castVote(choice) {
+  if (affq.isShowing()) {
+    const map = { right: "right", left: "left", neutral: "center" };
+    await affq.answer(map[choice], async () => {
+      const me = await getMe();
+      state.affiliation = me.body.affiliation || null;
+      state.votes = me.body.votes || state.votes;
+    });
+    return;
+  }
   if (submitting || state.revealed || !state.current) return;
   submitting = true;
   const id = state.current;
@@ -242,6 +271,10 @@ export async function castVote(choice) {
 }
 
 export function next() {
+  if (affq.isRevealed()) {
+    document.getElementById("btn-next")?.click();
+    return;
+  }
   if (!state.revealed) return;
   showNextCard();
 }
