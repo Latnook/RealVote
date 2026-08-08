@@ -35,6 +35,7 @@ image on one origin with one cache policy.
 import argparse
 import csv
 import json
+import os
 import pathlib
 import re
 import subprocess
@@ -50,7 +51,19 @@ IMG_DIR = ROOT / "site" / "img"
 MAX_DIM = 1200          # matches the browser-side resize in site/admin/admin.js
 QUALITY = 85
 MAX_BYTES = 25 * 1024 * 1024   # refuse absurd downloads before converting
+# Wikimedia's robot policy (https://w.wiki/4wJS) wants a real user-agent naming the tool
+# and a way to contact whoever runs it. Override with LR_USER_AGENT if you prefer.
+USER_AGENT = os.environ.get(
+    "LR_USER_AGENT",
+    "lr-add-image/1.0 (+https://latnook.com; item pictures for a Hebrew polling site)",
+)
+DELAY = float(os.environ.get("LR_FETCH_DELAY", "1.0"))   # polite pause between downloads
+RETRIES = 4
+BACKOFF = 5.0                                            # seconds, doubled per retry
 SUFFIXES = {".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp", ".tif", ".tiff", ".heic", ".avif", ".svg"}
+
+
+_fetched = [0]   # remote downloads so far, for spacing requests
 
 
 def api(base, path, method="GET", payload=None):
@@ -95,16 +108,22 @@ def sanitize_svg(src, dest):
     """
     BAD_TAGS = {"script", "foreignObject", "handler", "animate", "set", "audio", "video", "iframe"}
 
-    # Reject entity declarations before parsing. Python's stdlib XML parser is not hardened
-    # against XXE (external entity) or billion-laughs (recursive entity expansion) attacks —
-    # and BOTH require a DOCTYPE/ENTITY declaration to work at all. Icon and logo SVGs never
-    # need one, so refusing them removes the entire attack class without a dependency.
-    head = src.read_bytes()[:4096].lower()
-    if b"<!doctype" in head or b"<!entity" in head:
-        raise ValueError("SVG declares a DOCTYPE/ENTITY — refused (entity-expansion risk)")
+    # Python's stdlib XML parser is not hardened against XXE (external entity) or
+    # billion-laughs (recursive entity expansion). Both need an ENTITY declaration, which
+    # can only appear in a DOCTYPE's internal subset — so reject those, and drop the plain
+    # `<!DOCTYPE svg PUBLIC ...>` that Illustrator and Inkscape emit, which is harmless and
+    # would be discarded on re-serialisation anyway.
+    raw = src.read_bytes()
+    if b"<!ENTITY" in raw.upper():
+        raise ValueError("SVG declares an ENTITY — refused (entity-expansion risk)")
+    doctype = re.search(rb"<!DOCTYPE[^>\[]*(\[.*?\])?\s*>", raw, re.I | re.S)
+    if doctype and doctype.group(1):
+        raise ValueError("SVG has a DOCTYPE internal subset — refused (entity-expansion risk)")
+    if doctype:
+        raw = raw[:doctype.start()] + raw[doctype.end():]
 
     try:
-        tree = ET.parse(src)
+        tree = ET.ElementTree(ET.fromstring(raw))
     except ET.ParseError as e:
         raise ValueError(f"unparseable SVG ({e})")
     root = tree.getroot()
@@ -133,18 +152,37 @@ def sanitize_svg(src, dest):
 
 
 def fetch(url, tmpdir):
-    """Download a remote image to a temp file. Never referenced remotely at serve time."""
-    req = urllib.request.Request(url, headers={"user-agent": "lr-add-image/1.0"})
-    with urllib.request.urlopen(req, timeout=30) as resp:
-        ctype = (resp.headers.get("content-type") or "").split(";")[0].strip()
-        if ctype and not ctype.startswith("image/"):
-            raise ValueError(f"not an image (content-type: {ctype})")
-        data = resp.read(MAX_BYTES + 1)
-    if len(data) > MAX_BYTES:
-        raise ValueError(f"larger than {MAX_BYTES // 1024 // 1024} MB")
-    dest = tmpdir / "download"
-    dest.write_bytes(data)
-    return dest
+    """Download a remote image to a temp file. Never referenced remotely at serve time.
+
+    Wikimedia — where most of these images live — enforces a robot policy: a generic
+    user-agent and back-to-back requests earn an immediate 429. So we identify the tool
+    properly, pause between downloads, and back off when asked to.
+    """
+    last = None
+    for attempt in range(RETRIES):
+        req = urllib.request.Request(url, headers={
+            "user-agent": USER_AGENT,
+            "accept": "image/*,*/*;q=0.8",
+        })
+        try:
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                ctype = (resp.headers.get("content-type") or "").split(";")[0].strip()
+                if ctype and not ctype.startswith("image/"):
+                    raise ValueError(f"not an image (content-type: {ctype})")
+                data = resp.read(MAX_BYTES + 1)
+            if len(data) > MAX_BYTES:
+                raise ValueError(f"larger than {MAX_BYTES // 1024 // 1024} MB")
+            dest = tmpdir / "download"
+            dest.write_bytes(data)
+            return dest
+        except urllib.error.HTTPError as e:
+            last = e
+            if e.code not in (429, 503) or attempt == RETRIES - 1:
+                raise
+            wait = float(e.headers.get("retry-after") or 0) or BACKOFF * (2 ** attempt)
+            print(f"      rate-limited, waiting {wait:.0f}s and retrying…")
+            time.sleep(wait)
+    raise last
 
 
 def attach(base, items, item_id, src, tmpdir=None):
@@ -152,6 +190,9 @@ def attach(base, items, item_id, src, tmpdir=None):
         print(f"  ✗ {item_id}: no such item")
         return False
     if isinstance(src, str) and src.startswith(("http://", "https://")):
+        if _fetched[0]:
+            time.sleep(DELAY)   # rate-limit ourselves, not just react to 429s
+        _fetched[0] += 1
         try:
             src = fetch(src, tmpdir)
         except (urllib.error.URLError, ValueError, OSError) as e:
@@ -259,6 +300,8 @@ def main():
     ap.add_argument("--from-csv", type=pathlib.Path, metavar="FILE",
                     help="attach images listed in the image_url column of that spreadsheet")
     ap.add_argument("--missing", action="store_true", help="list items with no picture and exit")
+    ap.add_argument("--only-missing", action="store_true",
+                    help="skip items that already have a picture (handy when retrying failures)")
     ap.add_argument("--base", default="http://localhost:8080", help="local server base URL")
     args = ap.parse_args()
 
@@ -310,6 +353,11 @@ def main():
 
         if args.from_csv:
             pairs = read_csv(args.from_csv, items)
+            if args.only_missing:
+                before = len(pairs)
+                pairs = [(i, s) for i, s in pairs if not items[i].get("image_key")]
+                if before - len(pairs):
+                    print(f"skipping {before - len(pairs)} item(s) that already have a picture")
             if not pairs:
                 print("nothing to attach — no rows have an image_url filled in")
                 return
