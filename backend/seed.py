@@ -22,7 +22,8 @@ def main():
     created = 0
     for it in items:
         try:
-            db.create_item(it["id"], it["name"], it["emoji"])
+            db.create_item(it["id"], it["name"], it["emoji"],
+                           category=it.get("category", "other"))
             created += 1
         except Exception:
             pass  # already seeded — idempotent
