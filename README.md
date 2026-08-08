@@ -49,12 +49,13 @@ voters can't lose or double-count anything.
 going live, because a public political site attracts exactly what you'd expect.
 
 **Categories.** Every item has one of twelve categories, and visitors can switch categories off in
-the ☰ menu; the deck and its counter follow.
+the ☰ menu; the deck follows. There is deliberately no progress counter — the deck grows, and a
+finish line would only make it feel like homework.
 
 ## Design
 
 "Swiss gradient slate" — International-Typographic layout (strict grid, 2px rules, sharp corners,
-an oversized ghost numeral) on dark graphite, with the two vote fields as slowly drifting gradients:
+generous space) on dark graphite, with the two vote fields as slowly drifting gradients:
 deep indigo→cyan for ימני, crimson→burnt-orange for שמאלני. One theme, no light/dark toggle. Every
 value lives in [`site/css/theme.css`](site/css/theme.css).
 
