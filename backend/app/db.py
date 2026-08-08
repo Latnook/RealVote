@@ -6,6 +6,8 @@ import uuid
 import boto3
 from botocore.exceptions import ClientError
 
+from app import categories
+
 CHOICES = {"left": "votes_left", "right": "votes_right", "neutral": "votes_neutral"}
 
 
@@ -77,13 +79,14 @@ def _to_item_dict(record):
         "votes_left": int(record["votes_left"]),
         "votes_right": int(record["votes_right"]),
         "votes_neutral": int(record["votes_neutral"]),
+        "category": record.get("category", categories.DEFAULT),
     }
     if record.get("image_key"):
         d["image_key"] = record["image_key"]
     return d
 
 
-def create_item(item_id, name, emoji, image_key=None):
+def create_item(item_id, name, emoji, image_key=None, category=categories.DEFAULT):
     record = {
         "PK": f"ITEM#{item_id}",
         "SK": "META",
@@ -94,6 +97,7 @@ def create_item(item_id, name, emoji, image_key=None):
         "votes_right": 0,
         "votes_neutral": 0,
         "created_at": int(time.time()),
+        "category": category if categories.is_valid(category) else categories.DEFAULT,
     }
     if image_key:
         record["image_key"] = image_key
@@ -124,7 +128,7 @@ def list_active_items():
 
 
 def update_item(item_id, **fields):
-    allowed = {"name", "emoji", "image_key", "status"}
+    allowed = {"name", "emoji", "image_key", "status", "category"}
     updates = {k: v for k, v in fields.items() if k in allowed}
     if not updates:
         return
