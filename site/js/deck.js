@@ -271,15 +271,13 @@ export async function castVote(choice) {
 }
 
 export function next() {
-  if (affq.isRevealed()) {
-    document.getElementById("btn-next")?.click();
-    return;
-  }
+  if (affq.advance()) return;
   if (!state.revealed) return;
   showNextCard();
 }
 
 export function back() {
+  if (affq.isShowing() || affq.isRevealed()) return;
   const idx = state.history.indexOf(state.current);
   if (idx <= 0) return;
   const target = state.history[idx - 1];

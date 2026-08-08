@@ -1,17 +1,11 @@
 import { setAffiliation } from "./api.js";
 
 const AT_KEY = "lr_affq_at";
-const esc = (s) =>
-  String(s)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
 
 let showing = false;
 let answered = false;
 let revealed = false;
+let pendingAffiliation = null;
 let onDone = () => {};
 
 export const isShowing = () => showing;
@@ -20,6 +14,13 @@ export const isShowing = () => showing;
 // guard skips the card while the reveal is up — otherwise setPointerCapture on #card
 // retargets the "הבא" button's click to the card and swallows it.
 export const isRevealed = () => revealed;
+
+/** Advance past the reveal, same as clicking הבא. Returns false if there's nothing to advance. */
+export function advance() {
+  if (!revealed) return false;
+  finish(pendingAffiliation);
+  return true;
+}
 
 function threshold() {
   try {
@@ -43,6 +44,7 @@ export function renderQuestion(area, done) {
   showing = true;
   answered = false;
   revealed = false;
+  pendingAffiliation = null;
   onDone = done;
   area.innerHTML = `
     <article class="card" id="card" data-affq="1">
@@ -92,12 +94,14 @@ export async function answer(choice, refreshMe) {
   reveal.innerHTML = revealHTML(body.stats, body.affiliation);
   reveal.classList.remove("hidden");
   revealed = true;
-  document.getElementById("btn-next").addEventListener("click", () => finish(body.affiliation));
+  pendingAffiliation = body.affiliation;
+  document.getElementById("btn-next").addEventListener("click", advance);
 }
 
 function finish(affiliation) {
   showing = false;
   revealed = false;
+  pendingAffiliation = null;
   document.getElementById("btn-neutral").textContent = "ניטרלי ↓";
   onDone(affiliation);
 }
