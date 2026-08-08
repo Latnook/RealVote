@@ -25,7 +25,7 @@ def test_get_items_lists_active_with_cache(fresh_table):
 
 def test_me_without_cookie_sets_one(fresh_table):
     resp, body = call(apigw_event("GET", "/api/me"))
-    assert body == {"votes": {}}
+    assert body == {"votes": {}, "affiliation": None}
     assert resp["cookies"][0].startswith("lr_uid=")
     assert resp["headers"]["cache-control"] == "no-store"
 
@@ -109,3 +109,54 @@ def test_allow_admin_ignored_inside_lambda(fresh_table, monkeypatch):
     assert is_admin(apigw_event("GET", "/api/admin/suggestions")) is True
     monkeypatch.setenv("AWS_LAMBDA_FUNCTION_NAME", "lr-api")
     assert is_admin(apigw_event("GET", "/api/admin/suggestions")) is False
+
+
+def test_items_includes_categories_and_crosstabs(fresh_table):
+    db.create_item("bbq", "מנגל", "🍖", category="food")
+    resp, body = call(apigw_event("GET", "/api/items"))
+    assert resp["statusCode"] == 200
+    assert body["items"][0]["category"] == "food"
+    assert body["items"][0]["xt_right_left"] == 0
+    assert {"slug": "food", "label": "אוכל"} in body["categories"]
+    assert len(body["categories"]) == 11
+
+
+def test_me_reports_affiliation(fresh_table):
+    resp, body = call(apigw_event("GET", "/api/me"))
+    assert body["affiliation"] is None
+    uid_cookie = resp["cookies"][0].split(";")[0]
+    call(apigw_event("POST", "/api/affiliation", cookies=[uid_cookie], body={"choice": "left"}))
+    _, body2 = call(apigw_event("GET", "/api/me", cookies=[uid_cookie]))
+    assert body2["affiliation"] == "left"
+
+
+def test_affiliation_post_returns_stats_and_sets_cookie(fresh_table):
+    resp, body = call(apigw_event("POST", "/api/affiliation", body={"choice": "center"}))
+    assert resp["statusCode"] == 200
+    assert body["affiliation"] == "center"
+    assert body["stats"] == {"right": 0, "left": 0, "center": 1}
+    assert resp["cookies"][0].startswith("lr_uid=")
+    assert resp["headers"]["cache-control"] == "no-store"
+
+
+def test_affiliation_second_answer_409(fresh_table):
+    resp, _ = call(apigw_event("POST", "/api/affiliation", body={"choice": "right"}))
+    uid_cookie = resp["cookies"][0].split(";")[0]
+    resp2, body2 = call(apigw_event("POST", "/api/affiliation", cookies=[uid_cookie],
+                                    body={"choice": "left"}))
+    assert resp2["statusCode"] == 409 and body2["error"] == "already_answered"
+
+
+def test_affiliation_bad_input_400(fresh_table):
+    assert call(apigw_event("POST", "/api/affiliation", body={"choice": "centrist"}))[0]["statusCode"] == 400
+    assert call(apigw_event("POST", "/api/affiliation", body={"choice": ["left"]}))[0]["statusCode"] == 400
+    assert call(apigw_event("POST", "/api/affiliation", body={}))[0]["statusCode"] == 400
+
+
+def test_vote_after_affiliation_feeds_crosstab_through_api(fresh_table):
+    db.create_item("bbq", "მნგל", "🍖", category="food")
+    resp, _ = call(apigw_event("POST", "/api/affiliation", body={"choice": "right"}))
+    uid_cookie = resp["cookies"][0].split(";")[0]
+    _, body = call(apigw_event("POST", "/api/vote", cookies=[uid_cookie],
+                               body={"item_id": "bbq", "choice": "left"}))
+    assert body["item"]["xt_right_left"] == 1

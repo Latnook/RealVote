@@ -2,7 +2,7 @@ import os
 import re
 import traceback
 
-from app import db, http
+from app import categories, db, http
 
 _UID_RE = re.compile(r"^[0-9a-f]{32}$")
 
@@ -23,15 +23,22 @@ def _uid(event):
 
 
 def get_items(event):
-    return http.response(200, {"items": db.list_active_items()},
-                         cache="public, max-age=30")
+    return http.response(
+        200,
+        {"items": db.list_active_items(), "categories": categories.CATEGORIES},
+        cache="public, max-age=30",
+    )
 
 
 def get_me(event):
     uid, cookie = _uid(event)
     votes = {} if cookie else db.get_user_votes(uid)
-    return http.response(200, {"votes": votes},
-                         cookies=[cookie] if cookie else None)
+    affiliation = None if cookie else db.get_affiliation(uid)
+    return http.response(
+        200,
+        {"votes": votes, "affiliation": affiliation},
+        cookies=[cookie] if cookie else None,
+    )
 
 
 def post_vote(event):
@@ -67,11 +74,26 @@ def post_suggest(event):
     return http.response(202, {"ok": True}, cookies=cookies)
 
 
+def post_affiliation(event):
+    body = http.read_json(event) or {}
+    choice = body.get("choice")
+    if not isinstance(choice, str) or choice not in db.AFFILIATIONS:
+        return http.response(400, {"error": "bad_choice"})
+    uid, cookie = _uid(event)
+    cookies = [cookie] if cookie else None
+    try:
+        stats = db.set_affiliation(uid, choice)
+    except db.AlreadyVoted:
+        return http.response(409, {"error": "already_answered"}, cookies=cookies)
+    return http.response(200, {"affiliation": choice, "stats": stats}, cookies=cookies)
+
+
 PUBLIC_ROUTES = {
     ("GET", "/api/items"): get_items,
     ("GET", "/api/me"): get_me,
     ("POST", "/api/vote"): post_vote,
     ("POST", "/api/suggest"): post_suggest,
+    ("POST", "/api/affiliation"): post_affiliation,
 }
 
 
