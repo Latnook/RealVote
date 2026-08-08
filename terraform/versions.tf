@@ -10,7 +10,7 @@ terraform {
       version = "~> 2.4"
     }
   }
-  backend "s3" {}   # configured via -backend-config=backend.hcl
+  backend "s3" {} # configured via -backend-config=backend.hcl
 }
 
 provider "aws" {
