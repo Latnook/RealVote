@@ -148,9 +148,10 @@ def test_affiliation_second_answer_409(fresh_table):
 
 
 def test_affiliation_bad_input_400(fresh_table):
-    assert call(apigw_event("POST", "/api/affiliation", body={"choice": "centrist"}))[0]["statusCode"] == 400
-    assert call(apigw_event("POST", "/api/affiliation", body={"choice": ["left"]}))[0]["statusCode"] == 400
-    assert call(apigw_event("POST", "/api/affiliation", body={}))[0]["statusCode"] == 400
+    for bad in ({"choice": "centrist"}, {"choice": ["left"]}, {}):
+        resp, body = call(apigw_event("POST", "/api/affiliation", body=bad))
+        assert resp["statusCode"] == 400 and body["error"] == "bad_choice"
+        assert resp["cookies"][0].startswith("lr_uid=")
 
 
 def test_vote_after_affiliation_feeds_crosstab_through_api(fresh_table):

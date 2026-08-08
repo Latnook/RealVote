@@ -75,12 +75,12 @@ def post_suggest(event):
 
 
 def post_affiliation(event):
+    uid, cookie = _uid(event)
+    cookies = [cookie] if cookie else None
     body = http.read_json(event) or {}
     choice = body.get("choice")
     if not isinstance(choice, str) or choice not in db.AFFILIATIONS:
-        return http.response(400, {"error": "bad_choice"})
-    uid, cookie = _uid(event)
-    cookies = [cookie] if cookie else None
+        return http.response(400, {"error": "bad_choice"}, cookies=cookies)
     try:
         stats = db.set_affiliation(uid, choice)
     except db.AlreadyVoted:
