@@ -25,7 +25,10 @@ export function advance() {
 function threshold() {
   try {
     const raw = localStorage.getItem(AT_KEY);
-    if (raw) return parseInt(raw, 10);
+    if (raw) {
+      const parsed = parseInt(raw, 10);
+      if (Number.isFinite(parsed)) return parsed;
+    }
     const k = 3 + Math.floor(Math.random() * 8); // 3..10 inclusive
     localStorage.setItem(AT_KEY, String(k));
     return k;
@@ -58,8 +61,9 @@ export function renderQuestion(area, done) {
 
 function revealHTML(stats, mine) {
   const total = stats.right + stats.left + stats.center || 1;
-  const pctR = Math.round((100 * stats.right) / total);
-  const pctL = Math.round((100 * stats.left) / total);
+  const pctR = Math.max(0, Math.round((100 * stats.right) / total));
+  const pctL = Math.max(0, Math.round((100 * stats.left) / total));
+  const pctC = Math.max(0, Math.round((100 * stats.center) / total));
   const mark = (side) => (mine === side ? " ✓" : "");
   return `
     <div class="bar">
@@ -70,7 +74,7 @@ function revealHTML(stats, mine) {
       <span class="right-side">ימנים ${pctR}%${mark("right")}</span>
       <span class="left-side">שמאלנים ${pctL}%${mark("left")}</span>
     </div>
-    <div class="neutral-count">🤷 ${100 - pctR - pctL}% מרכז משעמם${mark("center")}</div>
+    <div class="neutral-count">🤷 ${pctC}% מרכז משעמם${mark("center")}</div>
     <div class="reveal-actions"><button class="primary" id="btn-next">הבא</button></div>`;
 }
 

@@ -58,11 +58,24 @@ export const getCategories = () =>
   state.selected ? [...state.selected] : state.allCategories.map((c) => c.slug);
 
 export function setCategories(slugs) {
-  state.selected = new Set(slugs);
-  try {
-    localStorage.setItem(CATS_KEY, JSON.stringify([...state.selected]));
-  } catch {
-    /* private mode: filter still applies for this session */
+  const chosen = new Set(slugs);
+  const isAll =
+    state.allCategories.length > 0 &&
+    state.allCategories.every((c) => chosen.has(c.slug));
+  if (isAll) {
+    state.selected = null;
+    try {
+      localStorage.removeItem(CATS_KEY);
+    } catch {
+      /* private mode: filter still applies for this session */
+    }
+  } else {
+    state.selected = chosen;
+    try {
+      localStorage.setItem(CATS_KEY, JSON.stringify([...state.selected]));
+    } catch {
+      /* private mode: filter still applies for this session */
+    }
   }
   rebuildQueue();
   showNextCard();
@@ -71,6 +84,8 @@ export function setCategories(slugs) {
 function inSelection(item) {
   return !state.selected || state.selected.has(item.category);
 }
+
+export const isSelected = (item) => inSelection(item);
 
 function rebuildQueue() {
   state.queue = shuffle(
@@ -119,6 +134,11 @@ export async function initDeck() {
 function updateChrome() {
   const inScope = state.items.filter(inSelection);
   const total = inScope.length;
+  if (total === 0) {
+    document.getElementById("counter").textContent = "–/–";
+    document.getElementById("ghost").textContent = "–";
+    return;
+  }
   const done = inScope.filter((i) => i.id in state.votes).length;
   const pos = Math.min(done + 1, total);
   document.getElementById("counter").textContent =
@@ -144,7 +164,14 @@ function cardHTML(item) {
 }
 
 function showNextCard() {
+  if (affq.isShowing() || affq.isRevealed()) {
+    // The identity question (or its own reveal) is already on screen — e.g. the
+    // panel was closed mid-question, which re-invokes showNextCard via
+    // setCategories. Leave it alone; affq's own onDone callback will resume us.
+    return;
+  }
   if (affq.shouldAsk(state)) {
+    updateChrome();
     state.revealed = false;
     affq.renderQuestion(area(), (affiliation) => {
       if (affiliation) state.affiliation = affiliation;
@@ -157,6 +184,7 @@ function showNextCard() {
   if (state.selected) {
     const inScope = state.items.filter(inSelection);
     if (state.selected.size === 0 || inScope.length === 0) {
+      updateChrome();
       state.current = null;
       area().innerHTML = `
         <div class="endscreen">

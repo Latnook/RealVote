@@ -5,6 +5,7 @@ import {
   getAllCategories,
   getCategories,
   setCategories,
+  isSelected,
 } from "./deck.js";
 import { suggest } from "./api.js";
 
@@ -155,7 +156,7 @@ function openSuggest() {
 /* ---- end screen ---- */
 function agreementPct() {
   const { items, votes } = getState();
-  const voted = items.filter((i) => i.id in votes);
+  const voted = items.filter((i) => i.id in votes && isSelected(i));
   if (!voted.length) return 0;
   const agreed = voted.filter((i) => {
     const counts = { left: i.votes_left, right: i.votes_right, neutral: i.votes_neutral };

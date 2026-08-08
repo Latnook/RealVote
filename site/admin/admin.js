@@ -49,7 +49,7 @@ async function loadCategories() {
 }
 
 const catSelect = (selected, cls) =>
-  `<select class="${cls}">${CATEGORIES.map(
+  `<select class="${cls}" aria-label="קטגוריה">${CATEGORIES.map(
     (c) =>
       `<option value="${esc(c.slug)}"${c.slug === selected ? " selected" : ""}>${esc(
         c.label
@@ -99,6 +99,13 @@ async function loadQueue() {
 
 /* ---- items ---- */
 async function loadItems() {
+  if (CATEGORIES.length === 0) {
+    await loadCategories();
+    if (CATEGORIES.length === 0) {
+      toast("שגיאה בטעינת הקטגוריות");
+      return;
+    }
+  }
   const { status, body } = await api("/api/admin/items");
   if (status !== 200) return toast(`שגיאה בטעינת הפריטים (${status})`);
   const showArchived = $("show-archived").checked;
@@ -124,7 +131,7 @@ function itemRowHTML(i) {
     <input class="ed-name grow" value="${esc(i.name)}">
     <input class="ed-emoji" value="${esc(i.emoji || "")}" size="3">
     ${catSelect(i.category, "ed-cat")}
-    <input type="file" class="ed-file" accept="image/*">
+    <input type="file" class="ed-file" accept="image/*" aria-label="תמונה">
     <span class="muted">${i.votes_left}/${i.votes_right}/${i.votes_neutral}</span>
     <button class="save">שמירה</button>
     <button class="ghost toggle">${i.status === "archived" ? "שחזור" : "ארכוב"}</button>
@@ -230,6 +237,7 @@ function initCreateForm() {
     }
     $("create-form").reset();
     $("c-file").classList.add("hidden");
+    $("c-id").focus();
     refresh();
   });
 }
