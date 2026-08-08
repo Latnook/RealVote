@@ -4,6 +4,7 @@
   --ink: #F2F3F5;
   --muted: #8B9099;
   --surface: #2E3238;
+  --plate: #F2F3F5;   /* behind transparent artwork, so dark logos stay legible */
   --right-a: #3730A3;  /* ימני gradient start (deep indigo) */
   --right-b: #0E7490;  /* ימני gradient end (deep cyan)    */
   --left-a: #B91C1C;   /* שמאלני gradient start (crimson)  */
