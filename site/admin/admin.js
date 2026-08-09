@@ -299,14 +299,64 @@ function renderVotes() {
      <div class="muted">זיהוי: ${a.left} שמאל · ${a.right} ימין · ${a.center} מרכז · ${a.unknown} ללא</div>
      <div class="muted">מזהי המצביעים אנונימיים — עוגייה אקראית, ללא שם או כתובת.</div>`;
 
-  renderVoters();
+  renderVotesList();
+}
+
+const emptyVotes = () =>
+  '<p class="muted" style="margin-top:10px">עדיין אין הצבעות.</p>';
+
+let VOTES_VIEW = "voters";
+
+function renderVotesList() {
+  if (VOTES_VIEW === "items") renderItemsCross();
+  else renderVoters();
+}
+
+function renderItemsCross() {
+  const total = (i) => i.votes_left + i.votes_right + i.votes_neutral;
+  const items = [...ITEMS_BY_ID.values()]
+    .filter((i) => total(i) > 0)
+    .sort((a, b) => total(b) - total(a));
+
+  if (!items.length) {
+    $("votes-list").innerHTML = emptyVotes();
+    return;
+  }
+
+  $("votes-list").innerHTML = items.map((i) => {
+    // xt_* counters are denormalized onto each item at vote time, so no join needed.
+    const lines = ["right", "left", "center"].map((aff) => {
+      const l = i[`xt_${aff}_left`], r = i[`xt_${aff}_right`], n = i[`xt_${aff}_neutral`];
+      return l + r + n === 0
+        ? ""
+        : `<div class="xt-line muted">${esc(AFF_HE[aff])}: שמאלני ${l} · ימני ${r} · ניטרלי ${n}</div>`;
+    }).join("");
+    return `<div class="xt-row">
+      <div class="xt-head">
+        <span class="grow">${esc(i.name)}</span>
+        <span class="muted">${i.votes_left}/${i.votes_right}/${i.votes_neutral}</span>
+      </div>
+      ${lines || '<div class="xt-line muted">אף מצביע לא הזדהה.</div>'}
+    </div>`;
+  }).join("");
+}
+
+function initVotesSeg() {
+  for (const btn of $("votes-seg").querySelectorAll(".seg-btn")) {
+    btn.addEventListener("click", () => {
+      VOTES_VIEW = btn.dataset.view;
+      for (const b of $("votes-seg").querySelectorAll(".seg-btn")) {
+        b.classList.toggle("active", b === btn);
+      }
+      renderVotesList();
+    });
+  }
 }
 
 function renderVoters() {
   const voters = VOTES.voters || [];
   if (!voters.length) {
-    $("votes-list").innerHTML =
-      '<p class="muted" style="margin-top:10px">עדיין אין הצבעות.</p>';
+    $("votes-list").innerHTML = emptyVotes();
     return;
   }
   $("votes-list").innerHTML = voters.map((v) => {
@@ -358,6 +408,7 @@ function showTab(name) {
 }
 
 function initTabs() {
+  initVotesSeg();
   for (const btn of $("tabs").querySelectorAll(".tab")) {
     btn.addEventListener("click", () => showTab(btn.dataset.tab));
   }
