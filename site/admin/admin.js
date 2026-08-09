@@ -247,6 +247,99 @@ function initCreateForm() {
 
 function refresh() { loadQueue(); loadItems(); }
 
+/* ---- votes ---- */
+let VOTES = null;
+let ITEMS_BY_ID = new Map();
+
+const CHOICE_HE = { left: "שמאלני", right: "ימני", neutral: "ניטרלי" };
+const AFF_HE = { left: "שמאל", right: "ימין", center: "מרכז" };
+
+const RTF = new Intl.RelativeTimeFormat("he", { numeric: "auto" });
+const REL_UNITS = [["year", 31536000], ["month", 2592000], ["day", 86400],
+                   ["hour", 3600], ["minute", 60]];
+
+// Intl gives correct Hebrew forms for free — "לפני יומיים", not "לפני 2 ימים".
+function relTime(ts) {
+  if (!ts) return "";
+  const diff = ts - Date.now() / 1000;
+  for (const [unit, secs] of REL_UNITS) {
+    if (Math.abs(diff) >= secs) return RTF.format(Math.round(diff / secs), unit);
+  }
+  return RTF.format(Math.round(diff), "second");
+}
+
+async function loadVotes() {
+  // Item names and the cross-tab counters live on /api/admin/items, so the votes
+  // payload can stay slim and carry item_id only.
+  const [votes, items] = await Promise.all([
+    api("/api/admin/votes"),
+    api("/api/admin/items"),
+  ]);
+  if (votes.status !== 200) return toast(`שגיאה בטעינת ההצבעות (${votes.status})`);
+  if (items.status !== 200) return toast(`שגיאה בטעינת הפריטים (${items.status})`);
+  VOTES = votes.body;
+  ITEMS_BY_ID = new Map((items.body.items || []).map((i) => [i.id, i]));
+  renderVotes();
+}
+
+function renderVotes() {
+  if (!VOTES) return;
+  const s = VOTES.summary;
+  const a = s.affiliations;
+
+  $("votes-warn").classList.toggle("hidden", !VOTES.detail_truncated);
+  if (VOTES.detail_truncated) {
+    $("votes-warn").textContent =
+      "המספרים למעלה מדויקים; פירוט ההצבעות לכל מצביע חלקי בלבד.";
+  }
+
+  $("votes-summary").innerHTML =
+    `<div class="sum-line"><b>${s.voters}</b> מצביעים · <b>${s.ballots}</b> הצבעות</div>
+     <div class="muted">שמאלני ${s.choices.left} · ימני ${s.choices.right} · ניטרלי ${s.choices.neutral}</div>
+     <div class="muted">זיהוי: ${a.left} שמאל · ${a.right} ימין · ${a.center} מרכז · ${a.unknown} ללא</div>
+     <div class="muted">מזהי המצביעים אנונימיים — עוגייה אקראית, ללא שם או כתובת.</div>`;
+
+  renderVoters();
+}
+
+function renderVoters() {
+  const voters = VOTES.voters || [];
+  if (!voters.length) {
+    $("votes-list").innerHTML =
+      '<p class="muted" style="margin-top:10px">עדיין אין הצבעות.</p>';
+    return;
+  }
+  $("votes-list").innerHTML = voters.map((v) => {
+    const last = v.ballots.length ? Math.max(...v.ballots.map((b) => b.ts)) : 0;
+    return `<div class="voter">
+      <button class="voter-head">
+        <span class="caret">▸</span>
+        <code>${esc(v.uid.slice(0, 8))}…</code>
+        <span class="grow">${v.ballot_count} הצבעות</span>
+        <span class="chip">${esc(v.affiliation ? AFF_HE[v.affiliation] : "—")}</span>
+        <span class="muted">${esc(relTime(last))}</span>
+      </button>
+      <div class="ballots hidden">${v.ballots.map(ballotRowHTML).join("")}</div>
+    </div>`;
+  }).join("");
+
+  for (const el of $("votes-list").querySelectorAll(".voter")) {
+    el.querySelector(".voter-head").addEventListener("click", () => {
+      const open = el.querySelector(".ballots").classList.toggle("hidden") === false;
+      el.querySelector(".caret").textContent = open ? "▾" : "▸";
+    });
+  }
+}
+
+function ballotRowHTML(b) {
+  const item = ITEMS_BY_ID.get(b.item_id);
+  return `<div class="ballot">
+    <span class="grow">${esc(item ? item.name : b.item_id)}</span>
+    <span class="choice ${esc(b.choice)}">${esc(CHOICE_HE[b.choice] || b.choice)}</span>
+    <span class="muted">${esc(relTime(b.ts))}</span>
+  </div>`;
+}
+
 /* ---- tabs ---- */
 const TAB_KEY = "lr_admin_tab";
 const TABS = ["queue", "items", "votes"];
@@ -261,6 +354,7 @@ function showTab(name) {
   }
   // Private-mode Safari throws on setItem; a lost tab preference is not worth failing over.
   try { localStorage.setItem(TAB_KEY, name); } catch { /* ignore */ }
+  if (name === "votes" && !VOTES) loadVotes();
 }
 
 function initTabs() {
