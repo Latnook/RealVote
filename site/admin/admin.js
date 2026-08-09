@@ -74,6 +74,9 @@ async function loadQueue() {
       )
       .join("") || '<p class="muted" style="margin-top:10px">אין הצעות ממתינות.</p>';
 
+  const pending = (body.suggestions || []).length;
+  $("tab-count").textContent = pending ? `(${pending})` : "";
+
   for (const row of $("queue").querySelectorAll(".row")) {
     const sid = row.dataset.sid;
     const text = row.querySelector(".grow").textContent;
@@ -244,6 +247,31 @@ function initCreateForm() {
 
 function refresh() { loadQueue(); loadItems(); }
 
+/* ---- tabs ---- */
+const TAB_KEY = "lr_admin_tab";
+const TABS = ["queue", "items", "votes"];
+
+function showTab(name) {
+  if (!TABS.includes(name)) name = "queue";
+  for (const t of TABS) {
+    $(`panel-${t}`).classList.toggle("hidden", t !== name);
+  }
+  for (const btn of $("tabs").querySelectorAll(".tab")) {
+    btn.classList.toggle("active", btn.dataset.tab === name);
+  }
+  // Private-mode Safari throws on setItem; a lost tab preference is not worth failing over.
+  try { localStorage.setItem(TAB_KEY, name); } catch { /* ignore */ }
+}
+
+function initTabs() {
+  for (const btn of $("tabs").querySelectorAll(".tab")) {
+    btn.addEventListener("click", () => showTab(btn.dataset.tab));
+  }
+  let saved = null;
+  try { saved = localStorage.getItem(TAB_KEY); } catch { /* ignore */ }
+  showTab(saved || "queue");
+}
+
 /* ---- Cognito sign-in (CLOUD mode) ----
    USER_PASSWORD_AUTH is not enabled on the pool, so we use the InitiateAuth REST API
    with SRP... which needs a crypto library. Instead the pool allows ALLOW_USER_SRP_AUTH
@@ -295,6 +323,7 @@ function enterAdmin(idToken) {
   $("login").classList.add("hidden");
   $("admin-main").classList.remove("hidden");
   initCreateForm();
+  initTabs();
   loadCategories().then(refresh);
 }
 
@@ -312,6 +341,7 @@ function enterAdmin(idToken) {
   $("mode-badge").textContent = "LOCAL";
   $("admin-main").classList.remove("hidden");
   initCreateForm();
+  initTabs();
   await loadCategories();
   refresh();
 })();
