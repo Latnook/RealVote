@@ -339,7 +339,7 @@
     "id": "metal-music",
     "name": "מוזיקת מטאל",
     "emoji": "🤘",
-    "category": "social"
+    "category": "music"
   },
   {
     "id": "no-tip",
@@ -430,5 +430,53 @@
     "name": "המטריקס",
     "emoji": "💊",
     "category": "movies"
+  },
+  {
+    "id": "galgalatz",
+    "name": "גלגלצ",
+    "emoji": "📻",
+    "category": "music"
+  },
+  {
+    "id": "israel-trail",
+    "name": "שביל ישראל",
+    "emoji": "🥾",
+    "category": "travel"
+  },
+  {
+    "id": "eurovision",
+    "name": "אירוויזיון",
+    "emoji": "🎶",
+    "category": "tv"
+  },
+  {
+    "id": "market-shopping",
+    "name": "קניות בשוק",
+    "emoji": "🛒",
+    "category": "consumer"
+  },
+  {
+    "id": "eilat-vacation",
+    "name": "חופשה באילת",
+    "emoji": "🏖️",
+    "category": "travel"
+  },
+  {
+    "id": "crocs",
+    "name": "קרוקס",
+    "emoji": "🐊",
+    "category": "consumer"
+  },
+  {
+    "id": "tea-over-coffee",
+    "name": "להעדיף תה על קפה",
+    "emoji": "🍵",
+    "category": "food"
+  },
+  {
+    "id": "compote",
+    "name": "קומפוט",
+    "emoji": "🥣",
+    "category": "food"
   }
 ]

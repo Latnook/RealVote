@@ -10,6 +10,7 @@ CATEGORIES = [
     {"slug": "sport", "label": "ספורט"},
     {"slug": "games", "label": "משחקים"},
     {"slug": "movies", "label": "סרטים"},
+    {"slug": "music", "label": "מוזיקה"},
     {"slug": "tv", "label": "תוכניות טלוויזיה"},
     {"slug": "conspiracy", "label": "תיאוריות קונספירציה"},
     {"slug": "other", "label": "אחר"},

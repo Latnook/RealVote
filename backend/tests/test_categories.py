@@ -3,7 +3,7 @@ from app import categories, db
 
 def test_category_list_shape():
     assert categories.DEFAULT == "other"
-    assert len(categories.CATEGORIES) == 12
+    assert len(categories.CATEGORIES) == 13
     assert categories.CATEGORIES[0] == {"slug": "events", "label": "אירועים"}
     assert {c["slug"] for c in categories.CATEGORIES} == categories.SLUGS
     assert all(c["label"].strip() for c in categories.CATEGORIES)
