@@ -37,11 +37,18 @@ resource "aws_cloudfront_function" "dir_index" {
     function handler(event) {
       var req = event.request;
       // Extensionless and slashless (e.g. "/admin") means a directory: send the
-      // browser to the canonical trailing-slash URL. The dot test is load-bearing —
-      // "/admin/config.json" has a dot, so it is never rewritten and still 404s when
-      // absent. If that path ever returned HTML, admin.js would boot LOCAL mode and
-      // the panel would have no authentication at all.
-      if (!req.uri.endsWith("/") && !req.uri.split("/").pop().includes(".")) {
+      // browser to the canonical trailing-slash URL. Three guards, all load-bearing:
+      //   1. /^\/[^/\\]/ — the path must start with exactly ONE slash. "//evil.com/x"
+      //      would otherwise yield a protocol-relative Location and redirect visitors
+      //      off our own domain; the backslash is excluded because some browsers
+      //      normalize "/\evil.com/x" the same way.
+      //   2. no trailing slash — those are handled by the index.html rewrite below.
+      //   3. the dot test — "/admin/config.json" has a dot, so it is never rewritten
+      //      and still 404s when absent. If that path ever returned HTML, admin.js
+      //      would boot LOCAL mode and the panel would have NO authentication at all.
+      // Known and accepted: the Location drops any query string. No link on the site
+      // uses one on an extensionless path, and rebuilding it here is disproportionate.
+      if (/^\/[^/\\]/.test(req.uri) && !req.uri.endsWith("/") && !req.uri.split("/").pop().includes(".")) {
         return {
           statusCode: 301,
           statusDescription: "Moved Permanently",

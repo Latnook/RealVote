@@ -309,6 +309,7 @@ const emptyVotes = () =>
 let VOTES_VIEW = "voters";
 
 function renderVotesList() {
+  if (!VOTES) return;
   if (VOTES_VIEW === "items") renderItemsCross();
   else renderVoters();
 }
@@ -354,7 +355,13 @@ function initVotesSeg() {
   }
 }
 
-const csvCell = (s) => `"${String(s).replace(/"/g, '""')}"`;
+const csvCell = (s) => {
+  const v = String(s);
+  // Item names come from public suggestion text (admin.js:89), so a cell can start
+  // with a formula character. A leading apostrophe makes spreadsheets treat it as text.
+  const safe = /^[=+\-@\t\r]/.test(v) ? `'${v}` : v;
+  return `"${safe.replace(/"/g, '""')}"`;
+};
 
 function votesCsv() {
   const rows = [["uid", "item_id", "name", "choice", "timestamp"]];
@@ -405,7 +412,7 @@ function renderVoters() {
     return;
   }
   $("votes-list").innerHTML = voters.map((v) => {
-    const last = v.ballots.length ? Math.max(...v.ballots.map((b) => b.ts)) : 0;
+    const last = v.ballots[0]?.ts || 0;
     return `<div class="voter">
       <button class="voter-head">
         <span class="caret">▸</span>
