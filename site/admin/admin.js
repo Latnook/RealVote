@@ -353,6 +353,35 @@ function initVotesSeg() {
   }
 }
 
+const csvCell = (s) => `"${String(s).replace(/"/g, '""')}"`;
+
+function votesCsv() {
+  const rows = [["uid", "item_id", "name", "choice", "timestamp"]];
+  for (const v of VOTES.voters) {
+    for (const b of v.ballots) {
+      const item = ITEMS_BY_ID.get(b.item_id);
+      rows.push([v.uid, b.item_id, item ? item.name : "", b.choice,
+                 new Date(b.ts * 1000).toISOString()]);
+    }
+  }
+  // U+FEFF BOM: without it Excel reads the file as cp1255 and Hebrew comes out as mojibake.
+  return "﻿" + rows.map((r) => r.map(csvCell).join(",")).join("\r\n");
+}
+
+function initVotesCsv() {
+  $("votes-csv").addEventListener("click", () => {
+    if (!VOTES) return toast("אין נתונים לייצוא");
+    const blob = new Blob([votesCsv()], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `votes-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast(VOTES.detail_truncated ? "הייצוא חלקי — יותר מדי הצבעות" : "יוצא ✓");
+  });
+}
+
 function renderVoters() {
   const voters = VOTES.voters || [];
   if (!voters.length) {
@@ -409,6 +438,7 @@ function showTab(name) {
 
 function initTabs() {
   initVotesSeg();
+  initVotesCsv();
   for (const btn of $("tabs").querySelectorAll(".tab")) {
     btn.addEventListener("click", () => showTab(btn.dataset.tab));
   }
