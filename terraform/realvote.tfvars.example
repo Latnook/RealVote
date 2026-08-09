@@ -1,0 +1,5 @@
+# Copy to realvote.tfvars (gitignored) and fill in.
+alarm_email = "you@example.com"
+admin_email = "you@example.com"
+# domain_name        = "realvote.latnook.com"
+# monthly_budget_usd = 10

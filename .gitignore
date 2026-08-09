@@ -26,3 +26,7 @@ site/img/
 
 # Local preview artefacts
 image-grid.png
+
+# Written by deploy.sh from Terraform outputs
+site/admin/config.json
+backups/

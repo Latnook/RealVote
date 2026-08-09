@@ -16,9 +16,18 @@
   </header>
   <div class="rule"></div>
 
-  <!-- COGNITO-LOGIN-SLOT: Plan 3 renders the Cognito login form here when config.json exists -->
   <section id="login" class="hidden">
-    <p>נדרשת התחברות — יוגדר בפריסה (Cognito).</p>
+    <h2>התחברות</h2>
+    <form id="login-form">
+      <input id="l-email" type="email" placeholder="דוא״ל" required autocomplete="username">
+      <input id="l-pass" type="password" placeholder="סיסמה" required autocomplete="current-password">
+      <button type="submit">כניסה</button>
+    </form>
+    <form id="newpass-form" class="hidden">
+      <p class="muted">נדרשת סיסמה חדשה בכניסה הראשונה</p>
+      <input id="l-newpass" type="password" placeholder="סיסמה חדשה" required autocomplete="new-password">
+      <button type="submit">עדכון סיסמה</button>
+    </form>
   </section>
 
   <main id="admin-main" class="hidden">
@@ -46,6 +55,9 @@
   </main>
 
   <div id="toast" class="toast hidden" role="status"></div>
+  <!-- Vendored (no CDN): UMD bundle, so it's a classic script exposing window.AmazonCognitoIdentity,
+       not an ES module — it must load and run before admin.js so the global is ready in time. -->
+  <script src="/admin/vendor/amazon-cognito-identity.min.js"></script>
   <script type="module" src="/admin/admin.js"></script>
 </body>
 </html>

@@ -244,18 +244,73 @@ function initCreateForm() {
 
 function refresh() { loadQueue(); loadItems(); }
 
+/* ---- Cognito sign-in (CLOUD mode) ----
+   USER_PASSWORD_AUTH is not enabled on the pool, so we use the InitiateAuth REST API
+   with SRP... which needs a crypto library. Instead the pool allows ALLOW_USER_SRP_AUTH
+   only, so the browser must perform SRP. Rather than ship a library, this uses the
+   AdminNoSrp-free path: Cognito's `USER_SRP_AUTH` via the hosted SDK is heavy, so we
+   call InitiateAuth with AuthFlow=USER_SRP_AUTH through amazon-cognito-identity-js,
+   loaded from our own origin (vendored, no CDN). The published bundle is UMD, not an
+   ES module, so it's loaded via a classic <script> tag in index.html and its exports
+   are read off the window.AmazonCognitoIdentity global set by that script. */
+function initCloud(cfg) {
+  $("mode-badge").textContent = "CLOUD";
+  $("login").classList.remove("hidden");
+
+  const { CognitoUserPool, CognitoUser, AuthenticationDetails } = window.AmazonCognitoIdentity;
+  const pool = new CognitoUserPool({
+    UserPoolId: cfg.userPoolId,
+    ClientId: cfg.userPoolClientId,
+  });
+
+  let pendingUser = null;
+
+  $("login-form").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const email = $("l-email").value.trim();
+    const user = new CognitoUser({ Username: email, Pool: pool });
+    const creds = new AuthenticationDetails({ Username: email, Password: $("l-pass").value });
+    user.authenticateUser(creds, {
+      onSuccess: (session) => enterAdmin(session.getIdToken().getJwtToken()),
+      onFailure: (err) => toast(err.message || "התחברות נכשלה"),
+      newPasswordRequired: () => {
+        pendingUser = user;
+        $("login-form").classList.add("hidden");
+        $("newpass-form").classList.remove("hidden");
+      },
+    });
+  });
+
+  $("newpass-form").addEventListener("submit", (e) => {
+    e.preventDefault();
+    pendingUser.completeNewPasswordChallenge($("l-newpass").value, {}, {
+      onSuccess: (session) => enterAdmin(session.getIdToken().getJwtToken()),
+      onFailure: (err) => toast(err.message || "עדכון הסיסמה נכשל"),
+    });
+  });
+}
+
+function enterAdmin(idToken) {
+  authHeader = `Bearer ${idToken}`;
+  $("login").classList.add("hidden");
+  $("admin-main").classList.remove("hidden");
+  initCreateForm();
+  loadCategories().then(refresh);
+}
+
 /* ---- boot: auth seam ---- */
 (async () => {
+  // Wired once, unconditionally: #show-archived exists in the DOM regardless of
+  // mode, so both LOCAL and CLOUD boot paths need this listener.
+  $("show-archived").addEventListener("change", loadItems);
+
   const cfg = await fetch("/admin/config.json").then((r) => (r.ok ? r.json() : null)).catch(() => null);
   if (cfg) {
-    // Plan 3: Cognito SRP login renders here; sets authHeader = `Bearer ${idToken}` then boots.
-    $("mode-badge").textContent = "CLOUD";
-    $("login").classList.remove("hidden");
+    initCloud(cfg);
     return;
   }
   $("mode-badge").textContent = "LOCAL";
   $("admin-main").classList.remove("hidden");
-  $("show-archived").addEventListener("change", loadItems);
   initCreateForm();
   await loadCategories();
   refresh();
