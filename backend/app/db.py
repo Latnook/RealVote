@@ -1,3 +1,4 @@
+import collections
 import functools
 import os
 import time
@@ -152,6 +153,80 @@ def list_all_items():
         if "LastEvaluatedKey" not in resp:
             return sorted(items, key=lambda i: i["id"])
         kwargs["ExclusiveStartKey"] = resp["LastEvaluatedKey"]
+
+
+VOTES_DETAIL_CAP = 50_000
+
+
+def list_all_votes(detail_cap=VOTES_DETAIL_CAP):
+    """Every ballot, grouped by voter, plus an exact summary.
+
+    Rows are tallied as they stream past, which costs O(1) memory — so the summary
+    is always exact no matter how large the table gets. Only the retained per-voter
+    detail is capped: that is the part that grows linearly and would eventually
+    exceed Lambda's 6 MB response limit (~104k ballots). Past the cap we keep
+    counting and stop keeping.
+    """
+    counts = collections.Counter()          # uid -> exact ballot count
+    ballots = collections.defaultdict(list)  # uid -> retained detail (may be partial)
+    affiliations = {}                        # uid -> affiliation, voters and lurkers alike
+    choices = dict.fromkeys(CHOICES, 0)
+    retained, truncated, kwargs = 0, False, {}
+
+    while True:
+        resp = table().scan(
+            FilterExpression="begins_with(SK, :v) OR SK = :p",
+            ProjectionExpression="PK,SK,choice,ts,affiliation",
+            ExpressionAttributeValues={":v": "VOTE#", ":p": "PROFILE"},
+            **kwargs,
+        )
+        for r in resp["Items"]:
+            uid = r["PK"].removeprefix("USER#")
+            if r["SK"] == "PROFILE":
+                affiliations[uid] = r["affiliation"]
+                continue
+            counts[uid] += 1
+            if r["choice"] in choices:
+                choices[r["choice"]] += 1
+            if retained < detail_cap:
+                ballots[uid].append({
+                    "item_id": r["SK"].removeprefix("VOTE#"),
+                    "choice": r["choice"],
+                    "ts": int(r.get("ts", 0)),
+                })
+                retained += 1
+            else:
+                truncated = True
+        if "LastEvaluatedKey" not in resp:
+            break
+        kwargs["ExclusiveStartKey"] = resp["LastEvaluatedKey"]
+
+    # A PROFILE with no ballots is not a voter: excluded here so every tally in
+    # `summary` covers the same population and the buckets sum to `voters`.
+    identified = collections.Counter(
+        affiliations[uid] for uid in counts if uid in affiliations
+    )
+    aff = {a: identified.get(a, 0) for a in AFFILIATIONS}
+    aff["unknown"] = len(counts) - sum(aff.values())
+
+    return {
+        "summary": {
+            "voters": len(counts),
+            "ballots": sum(counts.values()),
+            "choices": choices,
+            "affiliations": aff,
+        },
+        "voters": [
+            {
+                "uid": uid,
+                "affiliation": affiliations.get(uid),
+                "ballot_count": n,
+                "ballots": sorted(ballots.get(uid, []), key=lambda b: b["ts"], reverse=True),
+            }
+            for uid, n in counts.most_common()
+        ],
+        "detail_truncated": truncated,
+    }
 
 
 def update_item(item_id, **fields):
