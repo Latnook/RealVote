@@ -173,3 +173,34 @@ def test_create_item_image_key_is_timestamped(fresh_table):
                                body={"item_id": "bbq", "name": "מנגל", "emoji": "🍖",
                                      "want_image": True}))
     assert body["image_key"].startswith("img/bbq-") and body["image_key"].endswith(".webp")
+
+
+def test_admin_votes_requires_auth(fresh_table):
+    resp, _ = call(apigw_event("GET", "/api/admin/votes"))
+    assert resp["statusCode"] == 401
+
+
+def test_admin_votes_returns_summary_and_voters(fresh_table):
+    db.create_item("katan", "קטאן", "🎲")
+    db.set_affiliation("u1", "left")
+    db.record_vote("u1", "katan", "left")
+    db.record_vote("u2", "katan", "right")
+
+    resp, body = call(apigw_event("GET", "/api/admin/votes", admin=True))
+
+    assert resp["statusCode"] == 200
+    assert body["summary"]["voters"] == 2
+    assert body["summary"]["ballots"] == 2
+    assert body["summary"]["affiliations"] == {
+        "right": 0, "left": 1, "center": 0, "unknown": 1
+    }
+    assert body["detail_truncated"] is False
+    assert {v["uid"] for v in body["voters"]} == {"u1", "u2"}
+    assert body["voters"][0]["ballots"][0]["item_id"] == "katan"
+
+
+def test_admin_votes_empty_table(fresh_table):
+    resp, body = call(apigw_event("GET", "/api/admin/votes", admin=True))
+    assert resp["statusCode"] == 200
+    assert body["summary"]["voters"] == 0
+    assert body["voters"] == []

@@ -101,6 +101,10 @@ def list_items(event):
     return http.response(200, {"items": db.list_all_items()})
 
 
+def list_votes(event):
+    return http.response(200, db.list_all_votes())
+
+
 def item_image(event, item_id):
     if db.get_item(item_id) is None:
         return http.response(404, {"error": "unknown_item"})
@@ -123,6 +127,8 @@ def dispatch(event, method, path, authorized):
         return create_item(event)
     if (method, path) == ("GET", "/api/admin/items"):
         return list_items(event)
+    if (method, path) == ("GET", "/api/admin/votes"):
+        return list_votes(event)
     if method == "POST" and len(parts) == 6 and parts[3] == "items" and parts[5] == "image":
         return item_image(event, parts[4])
     if method == "PATCH" and len(parts) == 5 and parts[3] == "items":
