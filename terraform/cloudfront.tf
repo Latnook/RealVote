@@ -31,11 +31,23 @@ resource "aws_cloudfront_cache_policy" "api_items" {
 resource "aws_cloudfront_function" "dir_index" {
   name    = "${var.project}-dir-index"
   runtime = "cloudfront-js-2.0"
-  comment = "Append index.html to directory URIs; S3 origins have no directory index."
+  comment = "Redirect extensionless URIs to a trailing slash, then append index.html; S3 origins have no directory index."
   publish = true
   code    = <<-JS
     function handler(event) {
       var req = event.request;
+      // Extensionless and slashless (e.g. "/admin") means a directory: send the
+      // browser to the canonical trailing-slash URL. The dot test is load-bearing —
+      // "/admin/config.json" has a dot, so it is never rewritten and still 404s when
+      // absent. If that path ever returned HTML, admin.js would boot LOCAL mode and
+      // the panel would have no authentication at all.
+      if (!req.uri.endsWith("/") && !req.uri.split("/").pop().includes(".")) {
+        return {
+          statusCode: 301,
+          statusDescription: "Moved Permanently",
+          headers: { location: { value: req.uri + "/" } }
+        };
+      }
       if (req.uri.endsWith("/")) {
         req.uri += "index.html";
       }
