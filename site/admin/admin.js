@@ -249,6 +249,7 @@ function refresh() { loadQueue(); loadItems(); }
 
 /* ---- votes ---- */
 let VOTES = null;
+const VOTES_OPEN = new Set();
 let ITEMS_BY_ID = new Map();
 
 const CHOICE_HE = { left: "שמאלני", right: "ימני", neutral: "ניטרלי" };
@@ -382,6 +383,21 @@ function initVotesCsv() {
   });
 }
 
+const VOTES_POLL_MS = 30000;
+let votesTimer = null;
+
+// Gated twice: the tab must be the active one AND the browser tab must be visible.
+// /api/admin/votes is a full table scan behind a CachingDisabled behavior, so a
+// backgrounded window left open overnight would otherwise scan all night.
+function votesAutoRefresh(on) {
+  clearInterval(votesTimer);
+  votesTimer = null;
+  if (!on) return;
+  votesTimer = setInterval(() => {
+    if (document.visibilityState === "visible") loadVotes();
+  }, VOTES_POLL_MS);
+}
+
 function renderVoters() {
   const voters = VOTES.voters || [];
   if (!voters.length) {
@@ -402,12 +418,19 @@ function renderVoters() {
     </div>`;
   }).join("");
 
-  for (const el of $("votes-list").querySelectorAll(".voter")) {
+  const els = [...$("votes-list").querySelectorAll(".voter")];
+  els.forEach((el, idx) => {
+    if (VOTES_OPEN.has(voters[idx].uid)) {
+      el.querySelector(".ballots").classList.remove("hidden");
+      el.querySelector(".caret").textContent = "▾";
+    }
     el.querySelector(".voter-head").addEventListener("click", () => {
       const open = el.querySelector(".ballots").classList.toggle("hidden") === false;
       el.querySelector(".caret").textContent = open ? "▾" : "▸";
+      if (open) VOTES_OPEN.add(voters[idx].uid);
+      else VOTES_OPEN.delete(voters[idx].uid);
     });
-  }
+  });
 }
 
 function ballotRowHTML(b) {
@@ -434,6 +457,7 @@ function showTab(name) {
   // Private-mode Safari throws on setItem; a lost tab preference is not worth failing over.
   try { localStorage.setItem(TAB_KEY, name); } catch { /* ignore */ }
   if (name === "votes" && !VOTES) loadVotes();
+  votesAutoRefresh(name === "votes");
 }
 
 function initTabs() {
