@@ -11,6 +11,7 @@ CATEGORIES = [
     {"slug": "games", "label": "משחקים"},
     {"slug": "movies", "label": "סרטים"},
     {"slug": "music", "label": "מוזיקה"},
+    {"slug": "style", "label": "מראה וסטייל"},
     {"slug": "tv", "label": "תוכניות טלוויזיה"},
     {"slug": "conspiracy", "label": "תיאוריות קונספירציה"},
     {"slug": "other", "label": "אחר"},

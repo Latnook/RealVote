@@ -118,7 +118,7 @@ def test_items_includes_categories_and_crosstabs(fresh_table):
     assert body["items"][0]["category"] == "food"
     assert body["items"][0]["xt_right_left"] == 0
     assert {"slug": "food", "label": "אוכל"} in body["categories"]
-    assert len(body["categories"]) == 13
+    assert len(body["categories"]) == 14
 
 
 def test_me_reports_affiliation(fresh_table):

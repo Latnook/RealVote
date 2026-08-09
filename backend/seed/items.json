@@ -478,5 +478,191 @@
     "name": "קומפוט",
     "emoji": "🥣",
     "category": "food"
+  },
+  {
+    "id": "energy-drinks",
+    "name": "משקאות אנרגיה",
+    "emoji": "⚡",
+    "category": "food"
+  },
+  {
+    "id": "non-plastic-straw",
+    "name": "קש שאינו מפלסטיק",
+    "emoji": "♻️",
+    "category": "consumer"
+  },
+  {
+    "id": "childfree",
+    "name": "אל-הורות",
+    "emoji": "💑",
+    "category": "social"
+  },
+  {
+    "id": "multiple-pets",
+    "name": "לגדל יותר מחיית מחמד אחת",
+    "emoji": "🐾",
+    "category": "social"
+  },
+  {
+    "id": "long-beard",
+    "name": "זקן ארוך",
+    "emoji": "🧔",
+    "category": "style"
+  },
+  {
+    "id": "wine-over-spirits",
+    "name": "להעדיף יין או בירה על משקאות חריפים",
+    "emoji": "🍷",
+    "category": "food"
+  },
+  {
+    "id": "tattoos",
+    "name": "קעקועים",
+    "emoji": "🖋️",
+    "category": "style"
+  },
+  {
+    "id": "heritage-sites",
+    "name": "לבקר באתרי מורשת",
+    "emoji": "🏰",
+    "category": "events"
+  },
+  {
+    "id": "resort-over-hiking",
+    "name": "להעדיף חופשת בטן גב על טיולים",
+    "emoji": "🏝️",
+    "category": "travel"
+  },
+  {
+    "id": "hiking-over-resort",
+    "name": "להעדיף טיול על חופשת בטן גב",
+    "emoji": "🏕️",
+    "category": "travel"
+  },
+  {
+    "id": "car-4x4",
+    "name": "רכב 4X4",
+    "emoji": "🚙",
+    "category": "consumer"
+  },
+  {
+    "id": "gel-nails",
+    "name": "לק ג'ל",
+    "emoji": "💅",
+    "category": "style"
+  },
+  {
+    "id": "tesla",
+    "name": "טסלה",
+    "emoji": "🚘",
+    "category": "consumer"
+  },
+  {
+    "id": "chinese-ev",
+    "name": "רכב חשמלי סיני",
+    "emoji": "🔌",
+    "category": "consumer"
+  },
+  {
+    "id": "ikea-only",
+    "name": "לקנות רהיטים רק באיקאה",
+    "emoji": "🪛",
+    "category": "home"
+  },
+  {
+    "id": "kibbutz-volunteering",
+    "name": "להתנדב בקיבוץ",
+    "emoji": "🌾",
+    "category": "social"
+  },
+  {
+    "id": "fruit-picking",
+    "name": "ללכת לקטיף",
+    "emoji": "🍎",
+    "category": "events"
+  },
+  {
+    "id": "stanley-bottle",
+    "name": "בקבוק סטנלי",
+    "emoji": "🥤",
+    "category": "consumer"
+  },
+  {
+    "id": "friday-dinner",
+    "name": "ארוחת שישי",
+    "emoji": "🍽️",
+    "category": "food"
+  },
+  {
+    "id": "sea-over-pool",
+    "name": "להעדיף ים על בריכה",
+    "emoji": "🌊",
+    "category": "travel"
+  },
+  {
+    "id": "pool-over-sea",
+    "name": "להעדיף בריכה על ים",
+    "emoji": "🏊",
+    "category": "travel"
+  },
+  {
+    "id": "cinema-over-home",
+    "name": "להעדיף לראות סרט בקולנוע מאשר בבית",
+    "emoji": "🎬",
+    "category": "movies"
+  },
+  {
+    "id": "home-over-cinema",
+    "name": "להעדיף לראות סרט בבית על קולנוע",
+    "emoji": "🍿",
+    "category": "movies"
+  },
+  {
+    "id": "anu-museum",
+    "name": "מוזיאון אנו",
+    "emoji": "🏛️",
+    "category": "events"
+  },
+  {
+    "id": "israel-museum",
+    "name": "מוזיאון ישראל",
+    "emoji": "🖼️",
+    "category": "events"
+  },
+  {
+    "id": "history-figurines",
+    "name": "בובות פיסת היסטוריה",
+    "emoji": "🧸",
+    "category": "consumer"
+  },
+  {
+    "id": "nature-wedding",
+    "name": "חתונה בטבע",
+    "emoji": "💒",
+    "category": "events"
+  },
+  {
+    "id": "folk-dancing",
+    "name": "ריקודי עם",
+    "emoji": "💃",
+    "category": "social"
+  },
+  {
+    "id": "friday-flowers",
+    "name": "פרחים ביום שישי",
+    "emoji": "💐",
+    "category": "home"
+  },
+  {
+    "id": "dreadlocks",
+    "name": "ראסטות",
+    "emoji": "🦱",
+    "category": "style"
+  },
+  {
+    "id": "arak",
+    "name": "ערק",
+    "emoji": "🥃",
+    "category": "food"
   }
 ]
