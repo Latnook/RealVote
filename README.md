@@ -125,6 +125,18 @@ Remote images are **downloaded and stored**, never hotlinked — remote URLs exp
 blockers drop requests to CDN hosts, so a hotlinked picture silently disappears for many visitors.
 SVGs are kept as vectors and sanitised on the way in.
 
+New items reach production through a second step, because `deploy.sh` ships code rather than
+content — it excludes `img/*` from the S3 sync and never touches DynamoDB:
+
+```bash
+./scripts/publish-items.py --dry-run     # what production is missing
+./scripts/publish-items.py               # pictures to S3, then the items pointing at them
+```
+
+It only ever adds, so it is safe to re-run and it will not undo a rename or refile done from
+`/admin/`. Deploy first when the change includes a new category — the category list lives in the
+Lambda, and an item filed under a category the API doesn't serve yet has nowhere to appear.
+
 ## Documentation
 
 - [`docs/superpowers/specs/`](docs/superpowers/specs/) — the design documents, including why the
