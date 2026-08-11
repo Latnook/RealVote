@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>קרדיטים — בעיניי</title>
+  <meta name="theme-color" content="#23262B">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="stylesheet" href="/css/theme.css">
+  <style>
+    body { background: var(--bg); color: var(--ink); font-family: var(--font);
+           margin: 0; padding: 0 16px 48px; }
+    header { padding: 18px 0 10px; }
+    .wordmark { font-weight: 900; font-size: 20px; }
+    .rule { border-top: var(--rule-w) solid var(--ink); margin-bottom: 18px; }
+    h1 { font-size: 22px; font-weight: 900; margin: 0 0 6px; }
+    p.lede { color: var(--muted); font-size: 14px; margin: 0 0 22px; max-width: 60ch; }
+    ul { list-style: none; margin: 0; padding: 0; }
+    li { display: flex; gap: 12px; align-items: center;
+         padding: 10px 0; border-bottom: 1px solid var(--surface); }
+    img { width: 64px; height: 43px; object-fit: cover; background: var(--surface); flex: none; }
+    .meta { min-width: 0; }
+    .name { font-weight: 700; font-size: 15px; }
+    .src { font-size: 12px; color: var(--muted); word-break: break-all; }
+    .src a { color: var(--muted); }
+    .none { color: var(--muted); font-style: italic; }
+  </style>
+</head>
+<body>
+  <header>
+    <span class="wordmark">בעיניי<span class="dot">.</span></span>
+  </header>
+  <div class="rule"></div>
+  <h1>קרדיטים לתמונות</h1>
+  <p class="lede">
+    הקוד של האתר מפורסם ברישיון MIT, אך התמונות אינן כלולות בו: כל אחת נאספה ממקור
+    צד־שלישי והרישיונות שלהן משתנים. הרשימה נבנית מהנתונים החיים של האתר.
+  </p>
+  <ul id="credits"></ul>
+  <script type="module" src="/js/credits-page.js"></script>
+</body>
+</html>

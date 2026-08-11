@@ -153,4 +153,5 @@ ever shows aggregates.
 ## Licence
 
 MIT — see [`LICENSE`](LICENSE). Item pictures are **not** covered by it: each was collected from a
-third-party source recorded in `images.csv`, and their licences vary.
+third-party source, recorded on the item itself and listed at
+[`/credits/`](https://realvote.latnook.com/credits/). Their licences vary.

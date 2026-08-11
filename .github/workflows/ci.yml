@@ -46,3 +46,6 @@ jobs:
 
       - name: Cross-attribution boundary checks
         run: node scripts/check-crosstab.mjs
+
+      - name: Credits page rendering checks
+        run: node scripts/check-credits.mjs
