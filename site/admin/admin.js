@@ -200,10 +200,42 @@ async function fileToWebp(file, maxDim = 1200) {
   return new Promise((res) => canvas.toBlob(res, "image/webp", 0.85));
 }
 
+/* A remote picture fails in more ways than a file picker, and each needs its own
+   message — "it didn't work" would send you hunting for the wrong problem. */
+async function urlToBlob(url) {
+  let resp;
+  try {
+    resp = await fetch(url, { mode: "cors" });
+  } catch {
+    throw new Error("cors");
+  }
+  if (!resp.ok) throw new Error("http");
+  const type = resp.headers.get("content-type") || "";
+  if (type.includes("svg")) throw new Error("svg");
+  if (!type.startsWith("image/")) throw new Error("not-image");
+  return resp.blob();
+}
+
+function imageErrorMessage(err) {
+  if (err.message === "svg") return "SVG — השתמש ב-add-image.py";
+  if (err.message === "not-image") return "הקישור אינו מוביל לתמונה";
+  if (err.message === "http") return "הקישור החזיר שגיאה";
+  return "לא ניתן להוריד מהקישור — הורד את התמונה והעלה כקובץ";
+}
+
 function initCreateForm() {
-  $("c-image").addEventListener("change", () =>
-    $("c-file").classList.toggle("hidden", !$("c-image").checked)
-  );
+  $("c-image").addEventListener("change", () => {
+    const on = $("c-image").checked;
+    $("c-file").classList.toggle("hidden", !on);
+    $("c-url").classList.toggle("hidden", !on);
+  });
+  // One source or the other, never both — whichever was touched last wins.
+  $("c-url").addEventListener("input", () => {
+    if ($("c-url").value.trim()) $("c-file").value = "";
+  });
+  $("c-file").addEventListener("change", () => {
+    if ($("c-file").files[0]) $("c-url").value = "";
+  });
   $("c-name").addEventListener("input", () => {
     if (!$("c-id").value) $("c-id").placeholder = slugify($("c-name").value) || "item-id";
   });
@@ -211,6 +243,20 @@ function initCreateForm() {
     e.preventDefault();
     const item_id = $("c-id").value.trim() || slugify($("c-name").value);
     const want_image = $("c-image").checked;
+    const source_url = $("c-url").value.trim();
+    const file = $("c-file").files[0];
+
+    // Resolve the picture BEFORE creating the item: a URL that cannot be fetched
+    // must not leave a pictureless item behind.
+    let blob = null;
+    if (want_image && (source_url || file)) {
+      try {
+        blob = await fileToWebp(source_url ? await urlToBlob(source_url) : file);
+      } catch (err) {
+        return toast(imageErrorMessage(err));
+      }
+    }
+
     const { status, body } = await api("/api/admin/items", {
       method: "POST",
       body: JSON.stringify({
@@ -219,12 +265,13 @@ function initCreateForm() {
         emoji: $("c-emoji").value.trim(),
         category: $("c-cat").value,
         want_image,
+        ...(source_url ? { image_source: source_url } : {}),
       }),
     });
     if (status === 409) return toast("item-id כבר קיים");
     if (status !== 200) return toast(`שגיאה (${status})`);
-    if (want_image && body.upload_url && $("c-file").files[0]) {
-      const blob = await fileToWebp($("c-file").files[0]);
+
+    if (blob && body.upload_url) {
       const up = await fetch(body.upload_url, {
         method: "PUT",
         headers: { "content-type": "image/webp" },
@@ -238,8 +285,10 @@ function initCreateForm() {
     } else {
       toast("נוצר ✓");
     }
+
     $("create-form").reset();
     $("c-file").classList.add("hidden");
+    $("c-url").classList.add("hidden");
     $("c-id").focus();
     refresh();
   });
