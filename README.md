@@ -103,7 +103,7 @@ cd backend && TABLE_NAME=lr-local DDB_ENDPOINT=http://localhost:8000 ../.venv/bi
 
 ```bash
 docker compose up -d dynamodb
-cd backend && ../.venv/bin/pytest -q      # 118 tests against DynamoDB Local
+cd backend && ../.venv/bin/pytest -q      # 119 tests against DynamoDB Local
 node scripts/check-crosstab.mjs           # boundary checks for the cross-attribution rule
 ```
 
