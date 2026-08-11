@@ -682,5 +682,11 @@
     "name": "נועה קירל",
     "emoji": "🎵",
     "category": "music"
+  },
+  {
+    "id": "come-dine-with-me",
+    "name": "בואו לאכול איתי",
+    "emoji": "🍲",
+    "category": "tv"
   }
 ]
