@@ -676,5 +676,11 @@
     "name": "רביד פלוטניק",
     "emoji": "🎙️",
     "category": "music"
+  },
+  {
+    "id": "noa-kirel",
+    "name": "נועה קירל",
+    "emoji": "🎵",
+    "category": "music"
   }
 ]
