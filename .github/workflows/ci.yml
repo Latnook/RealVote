@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      DDB_ENDPOINT: http://localhost:8000
+      # The two presign tests build a real boto3 S3 client. Presigning signs
+      # locally and never calls AWS, so dummy values are enough — but absent
+      # credentials raise NoCredentialsError and fail the suite.
+      AWS_ACCESS_KEY_ID: ci
+      AWS_SECRET_ACCESS_KEY: ci
+      AWS_DEFAULT_REGION: us-east-1
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Start DynamoDB Local
+        run: |
+          docker run -d --rm -p 8000:8000 --name ddb-local amazon/dynamodb-local:latest
+          for _ in $(seq 1 30); do
+            curl -s -o /dev/null http://localhost:8000 && exit 0
+            sleep 1
+          done
+          echo "DynamoDB Local did not come up" >&2
+          exit 1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'   # matches terraform/lambda.tf
+
+      - name: Install Python dependencies
+        run: pip install -r backend/requirements-dev.txt
+
+      - name: Run pytest
+        working-directory: backend
+        run: python -m pytest -q
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Cross-attribution boundary checks
+        run: node scripts/check-crosstab.mjs
