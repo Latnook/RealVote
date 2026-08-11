@@ -109,8 +109,12 @@ node scripts/check-crosstab.mjs           # boundary checks for the cross-attrib
 
 ## Adding items and pictures
 
-Items are seeded from [`backend/seed/items.json`](backend/seed/items.json) and managed from
-`/admin/`, where each row can be renamed, re-filed, given a picture, archived and restored.
+Items live in DynamoDB and are managed from `/admin/`. `backend/seed.py` seeds a local table
+from the live site's public feed, so no AWS credentials are needed:
+
+```bash
+cd backend && python seed.py --with-images
+```
 
 The pictures themselves are **not in this repository** — `images.csv` records where each one came
 from, so a fresh clone can fetch them. Items without a picture fall back to a large emoji.
