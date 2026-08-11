@@ -155,7 +155,7 @@ def test_affiliation_bad_input_400(fresh_table):
 
 
 def test_vote_after_affiliation_feeds_crosstab_through_api(fresh_table):
-    db.create_item("bbq", "მნგل", "🍖", category="food")
+    db.create_item("bbq", "მნგל", "🍖", category="food")
     resp, _ = call(apigw_event("POST", "/api/affiliation", body={"choice": "right"}))
     uid_cookie = resp["cookies"][0].split(";")[0]
     _, body = call(apigw_event("POST", "/api/vote", cookies=[uid_cookie],

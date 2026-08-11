@@ -69,9 +69,10 @@ def create_item(event):
     category = body.get("category", categories.DEFAULT)
     if not categories.is_valid(category):
         return http.response(400, {"error": "bad_category"})
-    image_source = body.get("image_source") or None
-    if image_source is not None and not isinstance(image_source, str):
+    raw = body.get("image_source")
+    if raw is not None and not isinstance(raw, str):
         return http.response(400, {"error": "bad_request"})
+    image_source = raw or None   # "" means absent, not stored empty
     image_key = _image_key(item_id) if body.get("want_image") else None
     try:
         db.create_item(item_id, name, body.get("emoji", ""), image_key=image_key,
@@ -92,6 +93,11 @@ def patch_item(event, item_id):
         return http.response(400, {"error": "bad_request"})
     if "category" in fields and not categories.is_valid(fields["category"]):
         return http.response(400, {"error": "bad_category"})
+    # Validate string fields before any writes
+    string_fields = {"name", "emoji", "image_key", "image_source"}
+    for field in string_fields:
+        if field in fields and not isinstance(fields[field], str):
+            return http.response(400, {"error": "bad_request"})
     try:
         db.update_item(item_id, **fields)
     except ClientError as e:

@@ -237,3 +237,134 @@ def test_patch_item_sets_image_source(fresh_table):
                                body={"image_source": "https://example.org/p.jpg"}))
     assert resp["statusCode"] == 200
     assert db.get_item("plain")["image_source"] == "https://example.org/p.jpg"
+
+
+def test_patch_item_rejects_non_string_name(fresh_table):
+    db.create_item("a", "מקור", "🅰️")
+    resp, _ = call(apigw_event("PATCH", "/api/admin/items/a", admin=True,
+                               body={"name": 123}))
+    assert resp["statusCode"] == 400
+    assert db.get_item("a")["name"] == "מקור"
+
+
+def test_patch_item_rejects_non_string_emoji(fresh_table):
+    db.create_item("b", "מקור", "🅱️")
+    resp, _ = call(apigw_event("PATCH", "/api/admin/items/b", admin=True,
+                               body={"emoji": []}))
+    assert resp["statusCode"] == 400
+    assert db.get_item("b")["emoji"] == "🅱️"
+
+
+def test_patch_item_rejects_non_string_image_key(fresh_table):
+    db.create_item("c", "מקור", "🅰️")
+    resp, _ = call(apigw_event("PATCH", "/api/admin/items/c", admin=True,
+                               body={"image_key": {}}))
+    assert resp["statusCode"] == 400
+    assert "image_key" not in db.get_item("c") or db.get_item("c").get("image_key") is None
+
+
+def test_patch_item_rejects_non_string_image_source_patch(fresh_table):
+    db.create_item("d", "מקור", "🅰️")
+    resp, _ = call(apigw_event("PATCH", "/api/admin/items/d", admin=True,
+                               body={"image_source": 42}))
+    assert resp["statusCode"] == 400
+    assert "image_source" not in db.get_item("d")
+
+
+def test_patch_item_accepts_string_name(fresh_table):
+    db.create_item("e", "ישן", "🅰️")
+    resp, _ = call(apigw_event("PATCH", "/api/admin/items/e", admin=True,
+                               body={"name": "חדש"}))
+    assert resp["statusCode"] == 200
+    assert db.get_item("e")["name"] == "חדש"
+
+
+def test_patch_item_accepts_string_emoji(fresh_table):
+    db.create_item("f", "מקור", "🅰️")
+    resp, _ = call(apigw_event("PATCH", "/api/admin/items/f", admin=True,
+                               body={"emoji": "🎈"}))
+    assert resp["statusCode"] == 200
+    assert db.get_item("f")["emoji"] == "🎈"
+
+
+def test_patch_item_accepts_string_image_key(fresh_table):
+    db.create_item("g", "מקור", "🅰️")
+    resp, _ = call(apigw_event("PATCH", "/api/admin/items/g", admin=True,
+                               body={"image_key": "img/x-1.webp"}))
+    assert resp["statusCode"] == 200
+    assert db.get_item("g")["image_key"] == "img/x-1.webp"
+
+
+def test_patch_item_status_preserved(fresh_table):
+    db.create_item("h", "מקור", "🅰️")
+    resp, _ = call(apigw_event("PATCH", "/api/admin/items/h", admin=True,
+                               body={"status": "archived"}))
+    assert resp["statusCode"] == 200
+    assert db.get_item("h")["status"] == "archived"
+
+
+def test_patch_item_status_bad_rejects(fresh_table):
+    db.create_item("i", "מקור", "🅰️")
+    resp, _ = call(apigw_event("PATCH", "/api/admin/items/i", admin=True,
+                               body={"status": "bogus"}))
+    assert resp["statusCode"] == 400
+    assert db.get_item("i")["status"] == "active"
+
+
+def test_patch_item_category_preserved(fresh_table):
+    db.create_item("j", "מקור", "🅰️")
+    resp, _ = call(apigw_event("PATCH", "/api/admin/items/j", admin=True,
+                               body={"category": "food"}))
+    assert resp["statusCode"] == 200
+    assert db.get_item("j")["category"] == "food"
+
+
+def test_patch_item_category_bad_rejects(fresh_table):
+    db.create_item("k", "מקור", "🅰️", category="food")
+    resp, _ = call(apigw_event("PATCH", "/api/admin/items/k", admin=True,
+                               body={"category": "nope"}))
+    assert resp["statusCode"] == 400
+    assert db.get_item("k")["category"] == "food"
+
+
+def test_patch_item_atomicity_rejects_mixed_bad_fields(fresh_table):
+    db.create_item("m", "טוב", "🅰️")
+    resp, _ = call(apigw_event("PATCH", "/api/admin/items/m", admin=True,
+                               body={"name": "טוב_updated", "emoji": 42}))
+    assert resp["statusCode"] == 400
+    assert db.get_item("m")["name"] == "טוב"
+
+
+def test_create_item_rejects_image_source_zero(fresh_table):
+    resp, _ = call(apigw_event("POST", "/api/admin/items", admin=True, body={
+        "item_id": "zero", "name": "אפס", "image_source": 0}))
+    assert resp["statusCode"] == 400
+    assert db.get_item("zero") is None
+
+
+def test_create_item_rejects_image_source_false(fresh_table):
+    resp, _ = call(apigw_event("POST", "/api/admin/items", admin=True, body={
+        "item_id": "false", "name": "שקר", "image_source": False}))
+    assert resp["statusCode"] == 400
+    assert db.get_item("false") is None
+
+
+def test_create_item_rejects_image_source_list(fresh_table):
+    resp, _ = call(apigw_event("POST", "/api/admin/items", admin=True, body={
+        "item_id": "list", "name": "רשימה", "image_source": []}))
+    assert resp["statusCode"] == 400
+    assert db.get_item("list") is None
+
+
+def test_create_item_rejects_image_source_dict(fresh_table):
+    resp, _ = call(apigw_event("POST", "/api/admin/items", admin=True, body={
+        "item_id": "dict", "name": "מילון", "image_source": {}}))
+    assert resp["statusCode"] == 400
+    assert db.get_item("dict") is None
+
+
+def test_create_item_accepts_empty_string_image_source(fresh_table):
+    resp, _ = call(apigw_event("POST", "/api/admin/items", admin=True, body={
+        "item_id": "empty", "name": "ריק", "emoji": "🙂", "image_source": ""}))
+    assert resp["statusCode"] == 200
+    assert "image_source" not in db.get_item("empty")
