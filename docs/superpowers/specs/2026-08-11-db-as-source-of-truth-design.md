@@ -33,6 +33,23 @@ After this work, adding an item is one form at `/admin/`, from any device.
 Nothing about the voting mechanic, the cross-attribution rule, the deck engine, or the admin
 suggestions/votes tabs changes.
 
+### 1.1 The schema stays in the repo; the rows do not
+
+"The database is the source of truth" is about **data**, not about structure. DynamoDB declares only
+PK and SK at the table level, so the real schema is the code that writes and reads records — and all
+of it stays in git:
+
+| Layer | Where | Fate |
+|---|---|---|
+| Table declaration — keys, types, TTL, PITR, billing mode | `terraform/dynamodb.tf` | unchanged |
+| Local/test table creation, mirroring the above | `db.ensure_table()` (`db.py:61`) | unchanged |
+| Record shapes — `ITEM#<id>/META`, `USER#<uid>/PROFILE`, `USER#<uid>/VOTE#<item>` | `db.py:82`, `:102`, `:233` | **extended** — `image_source` is defined here (§2) |
+| Canonical category list | `backend/app/categories.py` | unchanged |
+| The 115 item **rows** | `backend/seed/items.json` | deleted |
+
+After this change the repo describes the shape of an item slightly more completely than it does
+today. It simply stops also carrying a copy of the contents.
+
 ---
 
 ## 2. Data model
