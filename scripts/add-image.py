@@ -443,7 +443,10 @@ def read_csv(path, items):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("item_id", nargs="?", help="item id to attach the picture to")
-    ap.add_argument("image", nargs="?", type=pathlib.Path, help="source image file")
+    # Left as a plain string: pathlib.Path("https://x/y") collapses the double slash to
+    # "https:/", so attach()'s URL branch never fires and a perfectly good URL is reported
+    # as a missing file. attach() does its own Path() once it knows the source is local.
+    ap.add_argument("image", nargs="?", help="source image file or URL")
     ap.add_argument("--batch", type=pathlib.Path, metavar="DIR",
                     help="attach every file in DIR whose name matches an item id")
     ap.add_argument("--from-list", type=pathlib.Path, metavar="FILE",
