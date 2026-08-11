@@ -670,5 +670,11 @@
     "name": "קיה פיקנטו",
     "emoji": "🚗",
     "category": "consumer"
+  },
+  {
+    "id": "ravid-plotnik",
+    "name": "רביד פלוטניק",
+    "emoji": "🎙️",
+    "category": "music"
   }
 ]
