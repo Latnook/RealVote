@@ -259,7 +259,9 @@ def attach(base, items, item_id, src, tmpdir=None):
     if item_id not in items:
         print(f"  ✗ {item_id}: no such item")
         return False
+    source_url = None
     if isinstance(src, str) and src.startswith(("http://", "https://")):
+        source_url = src   # captured before src gets reassigned to the downloaded temp path
         if _fetched[0]:
             time.sleep(DELAY)   # rate-limit ourselves, not just react to 429s
         _fetched[0] += 1
@@ -290,7 +292,10 @@ def attach(base, items, item_id, src, tmpdir=None):
     except ValueError as e:
         print(f"  ✗ {item_id}: {e}")
         return False
-    status, _ = api(base, f"/api/admin/items/{item_id}", "PATCH", {"image_key": key})
+    patch_body = {"image_key": key}
+    if source_url:
+        patch_body["image_source"] = source_url
+    status, _ = api(base, f"/api/admin/items/{item_id}", "PATCH", patch_body)
     if status != 200:
         dest.unlink(missing_ok=True)     # don't leave an orphan the item doesn't reference
         print(f"  ✗ {item_id}: PATCH returned {status}")

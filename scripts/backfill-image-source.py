@@ -11,6 +11,9 @@ This walks the CSV once and patches every item it can account for.
 Idempotent: an item that already carries an image_source is left alone, so a partial
 run can simply be repeated. Items with no picture are skipped (nothing to attribute),
 and so are CSV rows for ids the table does not have.
+
+ADMIN_TOKEN accepts a bare Cognito id token or one already prefixed with "Bearer "
+(case-insensitive) — either form works; the script adds the prefix if missing.
 """
 
 import argparse
@@ -64,6 +67,12 @@ def site_url():
     return out.stdout.strip().rstrip("/")
 
 
+def _bearer(token):
+    """The browser sends `Bearer <token>` (site/admin/admin.js); API Gateway's JWT
+    authorizer requires that prefix. Add it if the operator pasted a bare token."""
+    return token if token.lower().startswith("bearer ") else f"Bearer {token}"
+
+
 def fetch_items(base):
     with urllib.request.urlopen(f"{base}/api/items", timeout=30) as resp:
         return {i["id"]: i for i in json.load(resp)["items"]}
@@ -73,7 +82,7 @@ def patch(base, token, item_id, url):
     req = urllib.request.Request(
         f"{base}/api/admin/items/{item_id}",
         data=json.dumps({"image_source": url}).encode(),
-        headers={"content-type": "application/json", "authorization": token},
+        headers={"content-type": "application/json", "authorization": _bearer(token)},
         method="PATCH",
     )
     try:
@@ -118,7 +127,8 @@ def main():
 
     token = os.environ.get("ADMIN_TOKEN")
     if not token:
-        sys.exit("set ADMIN_TOKEN to a Cognito id token (copy it from /admin/ devtools)")
+        sys.exit("set ADMIN_TOKEN to a Cognito id token (copy it from /admin/ devtools) — "
+                  "with or without a leading 'Bearer '")
 
     ok = sum(patch(base, token, iid, url) for iid, url in plan)
     print(f"\nbackfilled {ok}/{len(plan)}")

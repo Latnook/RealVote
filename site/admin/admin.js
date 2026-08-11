@@ -134,6 +134,7 @@ function itemRowHTML(i) {
     <input class="ed-name grow" value="${esc(i.name)}">
     <input class="ed-emoji" value="${esc(i.emoji || "")}" size="3">
     ${catSelect(i.category, "ed-cat")}
+    <input class="ed-source" value="${esc(i.image_source || "")}" placeholder="מקור התמונה (URL)">
     <input type="file" class="ed-file" accept="image/*" aria-label="תמונה">
     <span class="muted">${i.votes_left}/${i.votes_right}/${i.votes_neutral}</span>
     <button class="save">שמירה</button>
@@ -148,6 +149,7 @@ function wireRow(row) {
       name: row.querySelector(".ed-name").value.trim(),
       emoji: row.querySelector(".ed-emoji").value.trim(),
       category: row.querySelector(".ed-cat").value,
+      image_source: row.querySelector(".ed-source").value.trim(),
     };
     if (!fields.name) return toast("שם לא יכול להיות ריק");
     const file = row.querySelector(".ed-file").files[0];

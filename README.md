@@ -103,7 +103,7 @@ cd backend && TABLE_NAME=lr-local DDB_ENDPOINT=http://localhost:8000 ../.venv/bi
 
 ```bash
 docker compose up -d dynamodb
-cd backend && ../.venv/bin/pytest -q      # 76 tests against DynamoDB Local
+cd backend && ../.venv/bin/pytest -q      # 118 tests against DynamoDB Local
 node scripts/check-crosstab.mjs           # boundary checks for the cross-attribution rule
 ```
 
@@ -113,7 +113,7 @@ Items live in DynamoDB and are managed from `/admin/`. `backend/seed.py` seeds a
 from the live site's public feed, so no AWS credentials are needed:
 
 ```bash
-cd backend && python seed.py --with-images
+cd backend && TABLE_NAME=lr-local DDB_ENDPOINT=http://localhost:8000 ../.venv/bin/python seed.py --with-images
 ```
 
 The pictures themselves are **not in this repository**. Each item records the URL its picture came

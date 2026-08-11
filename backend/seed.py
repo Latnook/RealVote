@@ -26,14 +26,21 @@ def fetch_items(feed_url):
         return json.load(resp)["items"]
 
 
-def seed_items(items):
-    """Create every item that is not already there. Returns how many were created."""
+def seed_items(items, with_images=False):
+    """Create every item that is not already there. Returns how many were created.
+
+    image_key is only carried over when with_images is True — otherwise the picture
+    bytes never land on disk (fetch_images is skipped too) and an <img> pointed at a
+    missing file beats the emoji fallback. image_source is always carried: it is just
+    attribution text, harmless even without a picture, and needed so a later
+    --with-images run (or the admin page) has it to display.
+    """
     created = 0
     for it in items:
         try:
             db.create_item(
                 it["id"], it["name"], it.get("emoji", ""),
-                image_key=it.get("image_key"),
+                image_key=it.get("image_key") if with_images else None,
                 category=it.get("category", "other"),
                 image_source=it.get("image_source"),
             )
@@ -78,7 +85,7 @@ def main():
               f"seeding an empty deck — add items from /admin/", file=sys.stderr)
         items = []
 
-    created = seed_items(items)
+    created = seed_items(items, with_images=args.with_images)
     print(f"items: {created} created, {len(items) - created} already existed")
 
     if args.with_images and items:
@@ -89,7 +96,7 @@ def main():
         uid = f"demo-{n}"
         if not items:
             break
-        for it in random.sample(items, k=random.randint(3, len(items))):
+        for it in random.sample(items, k=random.randint(min(3, len(items)), len(items))):
             choice = random.choices(["left", "right", "neutral"], weights=[45, 45, 10])[0]
             try:
                 db.record_vote(uid, it["id"], choice)
