@@ -664,5 +664,11 @@
     "name": "ערק",
     "emoji": "🥃",
     "category": "food"
+  },
+  {
+    "id": "kia-picanto",
+    "name": "קיה פיקנטו",
+    "emoji": "🚗",
+    "category": "consumer"
   }
 ]
