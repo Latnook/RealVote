@@ -204,3 +204,36 @@ def test_admin_votes_empty_table(fresh_table):
     assert resp["statusCode"] == 200
     assert body["summary"]["voters"] == 0
     assert body["voters"] == []
+
+
+def test_create_item_persists_image_source(fresh_table):
+    resp, _ = call(apigw_event("POST", "/api/admin/items", admin=True, body={
+        "item_id": "picanto", "name": "קיה פיקנטו", "emoji": "🚗",
+        "category": "consumer",
+        "image_source": "https://upload.wikimedia.org/wikipedia/commons/1/11/x.JPG",
+    }))
+    assert resp["statusCode"] == 200
+    assert db.get_item("picanto")["image_source"] == \
+        "https://upload.wikimedia.org/wikipedia/commons/1/11/x.JPG"
+
+
+def test_create_item_without_image_source_still_works(fresh_table):
+    resp, _ = call(apigw_event("POST", "/api/admin/items", admin=True, body={
+        "item_id": "plain", "name": "פשוט", "emoji": "🙂"}))
+    assert resp["statusCode"] == 200
+    assert "image_source" not in db.get_item("plain")
+
+
+def test_create_item_rejects_non_string_image_source(fresh_table):
+    resp, _ = call(apigw_event("POST", "/api/admin/items", admin=True, body={
+        "item_id": "bad", "name": "רע", "image_source": 42}))
+    assert resp["statusCode"] == 400
+    assert db.get_item("bad") is None
+
+
+def test_patch_item_sets_image_source(fresh_table):
+    db.create_item("plain", "פשוט", "🙂")
+    resp, _ = call(apigw_event("PATCH", "/api/admin/items/plain", admin=True,
+                               body={"image_source": "https://example.org/p.jpg"}))
+    assert resp["statusCode"] == 200
+    assert db.get_item("plain")["image_source"] == "https://example.org/p.jpg"

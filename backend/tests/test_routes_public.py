@@ -155,9 +155,19 @@ def test_affiliation_bad_input_400(fresh_table):
 
 
 def test_vote_after_affiliation_feeds_crosstab_through_api(fresh_table):
-    db.create_item("bbq", "მნგל", "🍖", category="food")
+    db.create_item("bbq", "მნგل", "🍖", category="food")
     resp, _ = call(apigw_event("POST", "/api/affiliation", body={"choice": "right"}))
     uid_cookie = resp["cookies"][0].split(";")[0]
     _, body = call(apigw_event("POST", "/api/vote", cookies=[uid_cookie],
                                body={"item_id": "bbq", "choice": "left"}))
     assert body["item"]["xt_right_left"] == 1
+
+
+def test_public_feed_exposes_image_source(fresh_table):
+    db.create_item("sourced", "עם מקור", "🖼️",
+                   image_key="img/sourced-1.webp",
+                   image_source="https://example.org/pic.jpg")
+    resp, body = call(apigw_event("GET", "/api/items"))
+    assert resp["statusCode"] == 200
+    item = next(i for i in body["items"] if i["id"] == "sourced")
+    assert item["image_source"] == "https://example.org/pic.jpg"

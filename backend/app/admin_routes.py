@@ -69,9 +69,13 @@ def create_item(event):
     category = body.get("category", categories.DEFAULT)
     if not categories.is_valid(category):
         return http.response(400, {"error": "bad_category"})
+    image_source = body.get("image_source") or None
+    if image_source is not None and not isinstance(image_source, str):
+        return http.response(400, {"error": "bad_request"})
     image_key = _image_key(item_id) if body.get("want_image") else None
     try:
-        db.create_item(item_id, name, body.get("emoji", ""), image_key=image_key, category=category)
+        db.create_item(item_id, name, body.get("emoji", ""), image_key=image_key,
+                       category=category, image_source=image_source)
     except ClientError as e:
         if e.response["Error"]["Code"] == "ConditionalCheckFailedException":
             return http.response(409, {"error": "item_exists"})
@@ -83,7 +87,7 @@ def create_item(event):
 def patch_item(event, item_id):
     body = http.read_json(event) or {}
     fields = {k: v for k, v in body.items()
-              if k in {"name", "emoji", "status", "image_key", "category"}}
+              if k in {"name", "emoji", "status", "image_key", "category", "image_source"}}
     if not fields or ("status" in fields and fields["status"] not in {"active", "archived"}):
         return http.response(400, {"error": "bad_request"})
     if "category" in fields and not categories.is_valid(fields["category"]):
