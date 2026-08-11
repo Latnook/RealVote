@@ -228,6 +228,7 @@ function initCreateForm() {
     const on = $("c-image").checked;
     $("c-file").classList.toggle("hidden", !on);
     $("c-url").classList.toggle("hidden", !on);
+    if (!on) { $("c-url").value = ""; $("c-file").value = ""; }
   });
   // One source or the other, never both — whichever was touched last wins.
   $("c-url").addEventListener("input", () => {
@@ -265,7 +266,7 @@ function initCreateForm() {
         emoji: $("c-emoji").value.trim(),
         category: $("c-cat").value,
         want_image,
-        ...(source_url ? { image_source: source_url } : {}),
+        ...(want_image && source_url ? { image_source: source_url } : {}),
       }),
     });
     if (status === 409) return toast("item-id כבר קיים");
