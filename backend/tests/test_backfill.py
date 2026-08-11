@@ -1,5 +1,6 @@
 import importlib.util
 import pathlib
+import urllib.error
 
 SCRIPT = pathlib.Path(__file__).resolve().parents[2] / "scripts" / "backfill-image-source.py"
 
@@ -43,3 +44,23 @@ def test_whitespace_is_stripped():
     rows = [{"id": "  picanto  ", "image_url": "  https://example.org/p.jpg  "}]
     items = {"picanto": {"id": "picanto", "image_key": "img/p-1.webp"}}
     assert backfill.plan_backfill(rows, items) == [("picanto", "https://example.org/p.jpg")]
+
+
+def test_patch_returns_false_on_http_error(monkeypatch):
+    backfill = load()
+
+    def raise_http_error(*args, **kwargs):
+        raise urllib.error.HTTPError("https://x", 400, "Bad Request", {}, None)
+
+    monkeypatch.setattr(backfill.urllib.request, "urlopen", raise_http_error)
+    assert backfill.patch("https://x", "tok", "some-item", "https://example.org/p.jpg") is False
+
+
+def test_patch_returns_false_on_url_error(monkeypatch):
+    backfill = load()
+
+    def raise_url_error(*args, **kwargs):
+        raise urllib.error.URLError("no route to host")
+
+    monkeypatch.setattr(backfill.urllib.request, "urlopen", raise_url_error)
+    assert backfill.patch("https://x", "tok", "some-item", "https://example.org/p.jpg") is False

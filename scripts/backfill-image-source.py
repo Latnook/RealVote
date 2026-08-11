@@ -20,6 +20,7 @@ import os
 import pathlib
 import subprocess
 import sys
+import urllib.error
 import urllib.request
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
@@ -75,8 +76,15 @@ def patch(base, token, item_id, url):
         headers={"content-type": "application/json", "authorization": token},
         method="PATCH",
     )
-    with urllib.request.urlopen(req, timeout=30) as resp:
-        return resp.status == 200
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            return resp.status == 200
+    except urllib.error.HTTPError as e:
+        print(f"  ✗ {item_id}: HTTP {e.code} {e.reason}")
+        return False
+    except urllib.error.URLError as e:
+        print(f"  ✗ {item_id}: {e.reason}")
+        return False
 
 
 def main():
