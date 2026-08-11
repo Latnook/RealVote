@@ -92,6 +92,8 @@ def _to_item_dict(record):
     }
     if record.get("image_key"):
         d["image_key"] = record["image_key"]
+    if record.get("image_source"):
+        d["image_source"] = record["image_source"]
     for aff in AFFILIATIONS:
         for choice in CHOICES:
             key = f"xt_{aff}_{choice}"
@@ -99,7 +101,8 @@ def _to_item_dict(record):
     return d
 
 
-def create_item(item_id, name, emoji, image_key=None, category=categories.DEFAULT):
+def create_item(item_id, name, emoji, image_key=None, category=categories.DEFAULT,
+                image_source=None):
     record = {
         "PK": f"ITEM#{item_id}",
         "SK": "META",
@@ -114,6 +117,8 @@ def create_item(item_id, name, emoji, image_key=None, category=categories.DEFAUL
     }
     if image_key:
         record["image_key"] = image_key
+    if image_source:
+        record["image_source"] = image_source
     table().put_item(Item=record, ConditionExpression="attribute_not_exists(PK)")
 
 
@@ -230,7 +235,7 @@ def list_all_votes(detail_cap=VOTES_DETAIL_CAP):
 
 
 def update_item(item_id, **fields):
-    allowed = {"name", "emoji", "image_key", "status", "category"}
+    allowed = {"name", "emoji", "image_key", "status", "category", "image_source"}
     updates = {k: v for k, v in fields.items() if k in allowed}
     if not updates:
         return
