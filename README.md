@@ -116,8 +116,10 @@ from the live site's public feed, so no AWS credentials are needed:
 cd backend && python seed.py --with-images
 ```
 
-The pictures themselves are **not in this repository** — `images.csv` records where each one came
-from, so a fresh clone can fetch them. Items without a picture fall back to a large emoji.
+The pictures themselves are **not in this repository**. Each item records the URL its picture came
+from, and every one is listed at [`/credits/`](https://realvote.latnook.com/credits/);
+`seed.py --with-images` pulls the pictures from the CDN into `site/img/` for local work. Items
+without a picture fall back to a large emoji.
 
 For bulk work: fill the `image_url` column of `images.csv` (a URL or a local path) and run
 
@@ -129,17 +131,12 @@ Remote images are **downloaded and stored**, never hotlinked — remote URLs exp
 blockers drop requests to CDN hosts, so a hotlinked picture silently disappears for many visitors.
 SVGs are kept as vectors and sanitised on the way in.
 
-New items reach production through a second step, because `deploy.sh` ships code rather than
-content — it excludes `img/*` from the S3 sync and never touches DynamoDB:
-
-```bash
-./scripts/publish-items.py --dry-run     # what production is missing
-./scripts/publish-items.py               # pictures to S3, then the items pointing at them
-```
-
-It only ever adds, so it is safe to re-run and it will not undo a rename or refile done from
-`/admin/`. Deploy first when the change includes a new category — the category list lives in the
-Lambda, and an item filed under a category the API doesn't serve yet has nowhere to appear.
+An item added from `/admin/` is live the moment it is created: the browser converts the picture and
+uploads it straight to S3, and the same request writes the item to DynamoDB. There is no second
+publishing step. `deploy.sh` ships code rather than content — it excludes `img/*` from the S3 sync
+and never touches the table — so it is only needed when the code itself changes. Deploy first when a
+change includes a new category: the category list lives in the Lambda, and an item filed under a
+category the API doesn't serve yet has nowhere to appear.
 
 ## Documentation
 
