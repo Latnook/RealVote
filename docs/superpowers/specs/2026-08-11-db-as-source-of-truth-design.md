@@ -158,11 +158,16 @@ The script is idempotent and stays in `scripts/` as the documented way to do a b
 
 Deleted: `backend/seed/items.json`, `scripts/publish-items.py`.
 
-`seed.py` gains `--from-prod`, which seeds local DynamoDB from
-`https://realvote.latnook.com/api/items` — the **public** feed. No AWS credentials, no Terraform
-outputs, no admin token, so a fresh clone of the open-source repo gets the real deck over plain
-HTTPS. `--with-images` additionally pulls the pictures from the CDN into `site/img/`; without it,
-local dev renders emoji, which is an acceptable default.
+`seed.py` seeds local DynamoDB from `https://realvote.latnook.com/api/items` — the **public** feed —
+as its default and only source. No AWS credentials, no Terraform outputs, no admin token, so a fresh
+clone of the open-source repo gets the real deck over plain HTTPS. `--feed URL` overrides the
+address; `--with-images` additionally pulls the pictures from the CDN into `site/img/`, without
+which local dev renders emoji, which is an acceptable default.
+
+(An earlier draft gave this a `--from-prod` flag. Once `items.json` is deleted there is nothing for
+the flag to switch away from, and `local-dev.sh` would have to learn to pass it — so the feed is
+simply the default. If the feed is unreachable, seeding reports it and continues with an empty deck
+rather than failing the local stack.)
 
 This also fixes a standing annoyance: `local-dev.sh` reseeds on every start, which today restores a
 stale snapshot and drops `image_key` links, requiring `add-image.py --relink` afterwards. Seeding
@@ -202,7 +207,7 @@ change, so there is no content pipeline left to build.
 | Public feed | `/api/items` includes `image_source` when present |
 | Admin create | POST with `image_source` persists it; POST without it still works |
 | Backfill script | Against a fresh table: sourced rows patched, unknown ids skipped, items without `image_key` skipped |
-| `seed.py --from-prod` | Against a stubbed feed: items created, idempotent on a second run |
+| `seed.seed_items()` | Items created from a feed payload, idempotent on a second run, image fields carried, unknown category falls back to `other` |
 | Credits page | Renders a linked source, and `מקור לא תועד` for an item without one |
 
 The URL-fetch path in `admin.js` is exercised by hand against a Wikimedia URL and against a
