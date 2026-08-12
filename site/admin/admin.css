@@ -56,3 +56,6 @@ select { background: var(--surface); color: var(--ink); border: 2px solid var(--
 .xt-head { display: flex; gap: 10px; align-items: center; }
 .xt-head .grow { flex: 1; }
 .xt-line { padding-right: 12px; }
+
+/* Replaces style="" attributes: the CSP has no 'unsafe-inline' in style-src. */
+.empty-note { margin-top: 10px; }

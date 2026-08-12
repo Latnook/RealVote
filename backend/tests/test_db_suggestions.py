@@ -33,3 +33,16 @@ def test_status_transitions(fresh_table):
 def test_set_status_unknown_sid_raises(fresh_table):
     with pytest.raises(db.NotFound):
         db.set_suggestion_status("nope", "rejected")
+
+
+def test_rate_counter_carries_ttl(fresh_table):
+    """The table's TTL is configured on `expires_at`; without it these rows never expire."""
+    import time
+
+    db.add_suggestion("u1", "משהו")
+    row = db._resource().Table(fresh_table).scan(
+        FilterExpression="begins_with(PK, :r)",
+        ExpressionAttributeValues={":r": "RATE#"},
+    )["Items"][0]
+    assert int(row["expires_at"]) > int(time.time())
+    assert int(row["expires_at"]) <= int(time.time()) + db.RATE_TTL_SECONDS

@@ -314,14 +314,21 @@ def get_user_votes(uid):
 
 
 SUGGEST_DAILY_CAP = 5
+RATE_TTL_SECONDS = 2 * 86400   # the counter only has to outlive its own UTC day
 
 
 def add_suggestion(uid, text):
     day = time.strftime("%Y%m%d", time.gmtime())
+    # `expires_at` is what the table's TTL is configured on (terraform/dynamodb.tf).
+    # Without it these per-visitor counters would be kept forever — a permanent record
+    # of when each uid was active, for a cap that stops mattering the next midnight.
     resp = table().update_item(
         Key={"PK": f"RATE#{uid}", "SK": f"SUGGEST#{day}"},
-        UpdateExpression="ADD n :one",
-        ExpressionAttributeValues={":one": 1},
+        UpdateExpression="SET expires_at = :exp ADD n :one",
+        ExpressionAttributeValues={
+            ":one": 1,
+            ":exp": int(time.time()) + RATE_TTL_SECONDS,
+        },
         ReturnValues="ALL_NEW",
     )
     if int(resp["Attributes"]["n"]) > SUGGEST_DAILY_CAP:

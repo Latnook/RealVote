@@ -244,3 +244,6 @@ body {
   border-top: 1px solid var(--muted);
   padding-top: 8px;
 }
+
+/* Replaces a style="" attribute: the CSP has no 'unsafe-inline' in style-src. */
+.panel-empty { margin-top: 16px; color: var(--muted); }

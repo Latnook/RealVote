@@ -15,7 +15,14 @@ resource "aws_cognito_user_pool" "admin" {
     temporary_password_validity_days = 7
   }
 
-  mfa_configuration = "OFF" # can be switched on in the console later without code changes
+  # OPTIONAL, not ON: this pool has exactly one account, and flipping to ON before that
+  # account has enrolled an authenticator locks the only operator out of their own admin
+  # panel. OPTIONAL makes TOTP available to enrol today; switch to "ON" once enrolled.
+  mfa_configuration = "OPTIONAL"
+
+  software_token_mfa_configuration {
+    enabled = true
+  }
 
   account_recovery_setting {
     recovery_mechanism {

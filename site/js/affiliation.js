@@ -59,16 +59,19 @@ export function renderQuestion(area, done) {
   document.getElementById("btn-neutral").textContent = "מרכז משעמם ↓";
 }
 
-function revealHTML(stats, mine) {
+function percentages(stats) {
   const total = stats.right + stats.left + stats.center || 1;
-  const pctR = Math.max(0, Math.round((100 * stats.right) / total));
-  const pctL = Math.max(0, Math.round((100 * stats.left) / total));
-  const pctC = Math.max(0, Math.round((100 * stats.center) / total));
+  const pct = (n) => Math.max(0, Math.round((100 * n) / total));
+  return { pctR: pct(stats.right), pctL: pct(stats.left), pctC: pct(stats.center) };
+}
+
+function revealHTML(stats, mine) {
+  const { pctR, pctL, pctC } = percentages(stats);
   const mark = (side) => (mine === side ? " ✓" : "");
   return `
     <div class="bar">
-      <div class="bar-left" style="width:${pctL}%"></div>
-      <div class="bar-right" style="width:${pctR}%"></div>
+      <div class="bar-left"></div>
+      <div class="bar-right"></div>
     </div>
     <div class="stats">
       <span class="right-side">ימנים ${pctR}%${mark("right")}</span>
@@ -96,6 +99,11 @@ export async function answer(choice, refreshMe) {
   card.querySelector(".hint").classList.add("hidden");
   const reveal = card.querySelector(".reveal");
   reveal.innerHTML = revealHTML(body.stats, body.affiliation);
+  // Set through the CSSOM rather than a style="" attribute: the site's CSP has no
+  // 'unsafe-inline' in style-src, which blocks inline style attributes but not this.
+  const { pctR, pctL } = percentages(body.stats);
+  reveal.querySelector(".bar-left").style.width = `${pctL}%`;
+  reveal.querySelector(".bar-right").style.width = `${pctR}%`;
   reveal.classList.remove("hidden");
   revealed = true;
   pendingAffiliation = body.affiliation;

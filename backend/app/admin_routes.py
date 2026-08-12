@@ -9,6 +9,27 @@ from app import categories, db, http
 
 _SLUG = re.compile(r"^[a-z0-9-]{1,64}$")
 
+# credits.js refuses to build an <a href> from anything that is not http(s), which keeps
+# a `javascript:` source from ever becoming a clickable link. These two are the server-side
+# backstop, so a hostile value cannot reach the database and sit there waiting for a
+# render path that forgets to check.
+_HTTP_URL = re.compile(r"^https?://", re.I)
+# Every image key this system produces is `img/<item-id>-<unix-ts>.<ext>` (admin_routes
+# ._image_key and scripts/add-image.py). Pinning the prefix stops an absolute URL, a
+# protocol-relative "//host/x", or a "../" traversal from landing in an <img src>.
+_IMAGE_KEY = re.compile(r"^img/[A-Za-z0-9._-]{1,128}$")
+
+
+def _bad_image_fields(fields):
+    """Returns an error code for the first invalid image field, or None if all are fine."""
+    source = fields.get("image_source")
+    if source and not _HTTP_URL.match(source):
+        return "bad_image_source"
+    key = fields.get("image_key")
+    if key and not _IMAGE_KEY.match(key):
+        return "bad_image_key"
+    return None
+
 
 def _presign(image_key):
     bucket = os.environ.get("IMG_BUCKET")
@@ -73,6 +94,9 @@ def create_item(event):
     if raw is not None and not isinstance(raw, str):
         return http.response(400, {"error": "bad_request"})
     image_source = raw or None   # "" means absent, not stored empty
+    bad = _bad_image_fields({"image_source": image_source})
+    if bad:
+        return http.response(400, {"error": bad})
     image_key = _image_key(item_id) if body.get("want_image") else None
     try:
         db.create_item(item_id, name, body.get("emoji", ""), image_key=image_key,
@@ -98,6 +122,9 @@ def patch_item(event, item_id):
     for field in string_fields:
         if field in fields and not isinstance(fields[field], str):
             return http.response(400, {"error": "bad_request"})
+    bad = _bad_image_fields(fields)
+    if bad:
+        return http.response(400, {"error": bad})
     try:
         db.update_item(item_id, **fields)
     except ClientError as e:

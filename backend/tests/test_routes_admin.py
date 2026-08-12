@@ -368,3 +368,62 @@ def test_create_item_accepts_empty_string_image_source(fresh_table):
         "item_id": "empty", "name": "ריק", "emoji": "🙂", "image_source": ""}))
     assert resp["statusCode"] == 200
     assert "image_source" not in db.get_item("empty")
+
+
+def test_create_item_rejects_javascript_image_source(fresh_table):
+    resp, body = call(apigw_event("POST", "/api/admin/items", admin=True, body={
+        "item_id": "js", "name": "רע", "image_source": "javascript:alert(1)"}))
+    assert resp["statusCode"] == 400 and body["error"] == "bad_image_source"
+    assert db.get_item("js") is None
+
+
+def test_create_item_rejects_data_uri_image_source(fresh_table):
+    resp, body = call(apigw_event("POST", "/api/admin/items", admin=True, body={
+        "item_id": "data", "name": "רע", "image_source": "data:text/html,<script>x</script>"}))
+    assert resp["statusCode"] == 400 and body["error"] == "bad_image_source"
+
+
+def test_create_item_accepts_http_image_source(fresh_table):
+    resp, _ = call(apigw_event("POST", "/api/admin/items", admin=True, body={
+        "item_id": "ok", "name": "טוב", "image_source": "HTTPS://Example.org/p.jpg"}))
+    assert resp["statusCode"] == 200
+    assert db.get_item("ok")["image_source"] == "HTTPS://Example.org/p.jpg"
+
+
+def test_patch_item_rejects_javascript_image_source(fresh_table):
+    db.create_item("p1", "פריט", "")
+    resp, body = call(apigw_event("PATCH", "/api/admin/items/p1", admin=True,
+                                  body={"image_source": "javascript:alert(1)"}))
+    assert resp["statusCode"] == 400 and body["error"] == "bad_image_source"
+    assert "image_source" not in db.get_item("p1")
+
+
+def test_patch_item_allows_clearing_image_source(fresh_table):
+    db.create_item("p2", "פריט", "", image_source="https://example.org/a.jpg")
+    resp, _ = call(apigw_event("PATCH", "/api/admin/items/p2", admin=True,
+                               body={"image_source": ""}))
+    assert resp["statusCode"] == 200
+    assert "image_source" not in db.get_item("p2")
+
+
+def test_patch_item_rejects_offsite_image_key(fresh_table):
+    db.create_item("p3", "פריט", "")
+    resp, body = call(apigw_event("PATCH", "/api/admin/items/p3", admin=True,
+                                  body={"image_key": "//evil.example/x.webp"}))
+    assert resp["statusCode"] == 400 and body["error"] == "bad_image_key"
+    assert "image_key" not in db.get_item("p3")
+
+
+def test_patch_item_rejects_traversal_image_key(fresh_table):
+    db.create_item("p4", "פריט", "")
+    resp, body = call(apigw_event("PATCH", "/api/admin/items/p4", admin=True,
+                                  body={"image_key": "img/../../etc/passwd"}))
+    assert resp["statusCode"] == 400 and body["error"] == "bad_image_key"
+
+
+def test_patch_item_accepts_generated_image_key(fresh_table):
+    db.create_item("p5", "פריט", "")
+    resp, _ = call(apigw_event("PATCH", "/api/admin/items/p5", admin=True,
+                               body={"image_key": "img/p5-1786206926.webp"}))
+    assert resp["statusCode"] == 200
+    assert db.get_item("p5")["image_key"] == "img/p5-1786206926.webp"

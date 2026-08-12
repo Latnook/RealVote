@@ -72,7 +72,7 @@ async function loadQueue() {
           <button class="ghost reject">דחייה</button>
         </div>`
       )
-      .join("") || '<p class="muted" style="margin-top:10px">אין הצעות ממתינות.</p>';
+      .join("") || '<p class="muted empty-note">אין הצעות ממתינות.</p>';
 
   const pending = (body.suggestions || []).length;
   $("tab-count").textContent = pending ? `(${pending})` : "";
@@ -356,7 +356,7 @@ function renderVotes() {
 }
 
 const emptyVotes = () =>
-  '<p class="muted" style="margin-top:10px">עדיין אין הצבעות.</p>';
+  '<p class="muted empty-note">עדיין אין הצבעות.</p>';
 
 let VOTES_VIEW = "voters";
 

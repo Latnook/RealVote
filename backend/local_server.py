@@ -9,10 +9,37 @@ from app.handler import lambda_handler
 
 SITE_DIR = pathlib.Path(__file__).resolve().parent.parent / "site"
 
+# Mirrors the two CloudFront response headers policies in terraform/cloudfront.tf so a
+# CSP violation shows up here rather than in production. Kept in sync by hand — if you
+# change one of local.csp_site / local.csp_admin, change the twin here too. HSTS is
+# deliberately absent: dev is plain http, where browsers ignore it anyway.
+CSP_SITE = (
+    "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; "
+    "connect-src 'self'; base-uri 'none'; form-action 'none'; "
+    "frame-ancestors 'none'; object-src 'none'"
+)
+CSP_ADMIN = (
+    "default-src 'none'; script-src 'self'; style-src 'self'; "
+    "img-src 'self' data: blob:; connect-src 'self' https:; base-uri 'none'; "
+    "form-action 'self'; frame-ancestors 'none'; object-src 'none'"
+)
+
 
 class Handler(SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=str(SITE_DIR), **kwargs)
+
+    def end_headers(self):
+        path = self.path.split("?")[0]
+        if not path.startswith("/api/"):
+            self.send_header(
+                "Content-Security-Policy",
+                CSP_ADMIN if path.startswith("/admin/") else CSP_SITE,
+            )
+            self.send_header("X-Content-Type-Options", "nosniff")
+            self.send_header("X-Frame-Options", "DENY")
+            self.send_header("Referrer-Policy", "strict-origin-when-cross-origin")
+        super().end_headers()
 
     def _api(self):
         length = int(self.headers.get("content-length") or 0)

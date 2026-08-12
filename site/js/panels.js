@@ -112,7 +112,7 @@ function openMyVotes() {
       <div class="cat-list">${catRows}</div>
     </section>
     <h3 class="myvotes-head">ההצבעות שלי</h3>
-    ${rows || '<p style="margin-top:16px; color:var(--muted)">עוד לא הצבעת על כלום.</p>'}`;
+    ${rows || '<p class="panel-empty">עוד לא הצבעת על כלום.</p>'}`;
   const applyCategories = () => {
     const boxes = [...panel.querySelectorAll(".cat-box")];
     if (boxes.length === 0) return; // panel opened before categories loaded — nothing to apply

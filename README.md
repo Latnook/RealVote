@@ -103,7 +103,7 @@ cd backend && TABLE_NAME=lr-local DDB_ENDPOINT=http://localhost:8000 ../.venv/bi
 
 ```bash
 docker compose up -d dynamodb
-cd backend && ../.venv/bin/pytest -q      # 119 tests against DynamoDB Local
+cd backend && ../.venv/bin/pytest -q      # 128 tests against DynamoDB Local
 node scripts/check-crosstab.mjs           # boundary checks for the cross-attribution rule
 ```
 
@@ -149,7 +149,34 @@ category the API doesn't serve yet has nowhere to appear.
 No accounts, no analytics, no third-party requests. A visitor is a random 32-character id in a
 cookie. The one genuinely sensitive value — your political self-identification — is stored as one of
 three words against that random id, with no name, email or IP beside it. The admin interface only
-ever shows aggregates.
+ever shows aggregates. The per-visitor counters behind the daily suggestion cap carry a two-day TTL,
+so they expire rather than accumulating a record of when each id was active.
+
+## Security
+
+The admin API sits behind an API Gateway JWT authorizer backed by a single-account Cognito pool
+(admin-create-only, 12-character password policy, TOTP available). The Lambda's own check is
+`"jwt" in requestContext.authorizer` — absent unless the authorizer actually ran, so it fails
+**closed**. `ALLOW_ADMIN=1` opens the admin API for local development and is ignored whenever
+`AWS_LAMBDA_FUNCTION_NAME` is set, so it cannot take effect in production. IAM is scoped to one
+table, one bucket prefix and one log group; the S3 bucket is reachable only through the
+distribution's OAC.
+
+Every render path escapes through an `esc()` helper, and a `Content-Security-Policy` with **no
+`unsafe-inline` and no `unsafe-eval`** stands behind it, so a missed call is inert rather than
+exploitable. Two policies are served (`terraform/cloudfront.tf`): the public site gets
+`default-src 'none'` with everything else `'self'`; `/admin/*` additionally allows `connect-src
+https:`, which it needs to fetch an operator-typed picture URL, reach Cognito, and PUT to a
+presigned S3 URL. Both send HSTS, `nosniff`, `frame-ancestors 'none'` and a referrer policy.
+
+Because there is no `unsafe-inline`, **inline `style=""` attributes and inline `<script>`/`<style>`
+blocks will silently stop working** — set styles through the CSSOM (as `deck.js` and
+`affiliation.js` do) and put rules in a stylesheet. `backend/local_server.py` serves the same
+headers in development so a violation surfaces locally rather than in production.
+
+Known and accepted: `lr_uid` is a client-side cookie, so a determined visitor can clear it to vote
+again or reset the suggestion cap. Fixing that needs accounts or a CAPTCHA, which would cost more
+than the poll is worth.
 
 ## Licence
 
