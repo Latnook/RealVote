@@ -103,7 +103,7 @@ cd backend && TABLE_NAME=lr-local DDB_ENDPOINT=http://localhost:8000 ../.venv/bi
 
 ```bash
 docker compose up -d dynamodb
-cd backend && ../.venv/bin/pytest -q      # 128 tests against DynamoDB Local
+cd backend && ../.venv/bin/pytest -q      # 134 tests against DynamoDB Local
 node scripts/check-crosstab.mjs           # boundary checks for the cross-attribution rule
 node scripts/check-credits.mjs            # credits page rendering, incl. safeHref
 node scripts/check-html-patterns.mjs      # pattern="" attributes must compile under `v`
@@ -146,6 +146,38 @@ publishing step. `deploy.sh` ships code rather than content — it excludes `img
 and never touches the table — so it is only needed when the code itself changes. Deploy first when a
 change includes a new category: the category list lives in the Lambda, and an item filed under a
 category the API doesn't serve yet has nowhere to appear.
+
+## Teardown and rebuild
+
+Two things live only in AWS. The DynamoDB table holds every vote, and the bucket's `img/`
+prefix holds every picture — `site/img/` is gitignored and `deploy.sh` excludes `img/*`
+from its sync, so neither comes back from a checkout. Point-in-time recovery does not
+help either: PITR dies with the table it protects.
+
+So `destroy.sh` snapshots both into `backups/<stamp>/` before Terraform touches anything,
+and refuses to proceed if that snapshot came out empty while the stack is not
+(`ALLOW_EMPTY_SNAPSHOT=1` overrides). The next `deploy.sh` restores from the newest
+timestamped snapshot automatically:
+
+```bash
+./scripts/destroy.sh -auto-approve     # snapshot, then tear down
+./scripts/deploy.sh  -auto-approve     # rebuild, then restore votes + pictures
+```
+
+Both halves of the restore are gated on emptiness — `restore.py` declines a table that
+already holds rows, and pictures are only pushed when `img/` is empty — so an ordinary
+deploy over a live stack restores nothing. `SKIP_RESTORE=1` opts out entirely.
+
+The snapshot format is DynamoDB's own typed JSON, so a restored row is identical to the
+exported one rather than something that survived a round-trip through Python types. The
+pair is covered by `backend/tests/test_backup_restore.py`, which asserts that a restored
+table serves byte-identical `list_active_items()`, `list_all_votes()` and affiliation
+stats. Directories not named `YYYYMMDD-HHMMSS` are ignored by the restore, so a snapshot
+you want to keep by hand can sit in `backups/` without ever being chosen.
+
+Expect 30–60 minutes of downtime for a full cycle: CloudFront and the ACM certificate are
+both slow to delete and recreate. The Cognito pool is replaced too, so the admin gets a
+new temporary password by email and both SNS subscriptions need confirming again.
 
 ## Documentation
 

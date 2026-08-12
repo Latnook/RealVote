@@ -16,6 +16,39 @@ $TF apply -var-file=realvote.tfvars "$@"
 BUCKET=$($TF output -raw bucket)
 DIST=$($TF output -raw distribution_id)
 URL=$($TF output -raw site_url)
+TABLE=$($TF output -raw table_name)
+REGION=$($TF output -raw region)
+
+# Restore from the newest destroy.sh snapshot, if there is one and this stack is bare.
+#
+# Both halves are gated on emptiness, so a routine deploy over a live stack does nothing:
+# restore.py refuses a table that already holds rows, and the pictures are only pushed
+# when the img/ prefix is empty. That makes this safe to run on every deploy rather than
+# something to remember at exactly the wrong moment. SKIP_RESTORE=1 opts out entirely.
+# Only YYYYMMDD-HHMMSS directories are candidates. A plain backups/*/ glob sorts
+# lexically, so any hand-made directory whose name starts with a letter ("rehearsal-…",
+# "keep-…") would sort after every timestamp and silently win — restoring stale data
+# over a fresh teardown. Restricting to [0-9]* makes the name format load-bearing and
+# leaves room for manually-kept snapshots alongside, which deploy will never choose.
+SNAPSHOT=$(ls -d backups/[0-9]*/ 2>/dev/null | sort | tail -1 || true)
+if [ -n "${SNAPSHOT:-}" ] && [ -z "${SKIP_RESTORE:-}" ]; then
+  echo "==> snapshot found: $SNAPSHOT"
+  if [ -f "${SNAPSHOT}table.json" ]; then
+    echo "==> restoring table $TABLE"
+    ./scripts/restore.py --table "$TABLE" --region "$REGION" --in "${SNAPSHOT}table.json"
+  fi
+  if [ -d "${SNAPSHOT}img" ]; then
+    if [ -z "$(aws s3 ls "s3://$BUCKET/img/" 2>/dev/null | head -1)" ]; then
+      echo "==> restoring $(find "${SNAPSHOT}img" -type f | wc -l) pictures to s3://$BUCKET/img/"
+      # Keys are timestamped and never rewritten in place (see s3.tf), so they are
+      # genuinely immutable and can be cached for as long as the CDN will hold them.
+      aws s3 sync "${SNAPSHOT}img/" "s3://$BUCKET/img/" --only-show-errors \
+        --cache-control "public,max-age=31536000,immutable"
+    else
+      echo "==> img/ already populated — leaving it alone"
+    fi
+  fi
+fi
 
 # The admin page fetches /admin/config.json to decide between LOCAL and CLOUD mode.
 # It must exist in production and must NOT be committed.
