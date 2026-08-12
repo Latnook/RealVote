@@ -12,9 +12,23 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 TF="terraform -chdir=terraform"
 
+# backup.py needs boto3, which lives in the project venv, not in the system python its
+# shebang would otherwise pick.
+if [ -x .venv/bin/python ]; then PY=.venv/bin/python; else PY=python3; fi
+
 STAMP=$(date +%Y%m%d-%H%M%S)
 DIR="backups/$STAMP"
 mkdir -p "$DIR"
+
+# Remove the snapshot directory if we abort before it holds anything. An empty but
+# timestamped husk is worse than no directory at all: it outranks every older, good
+# snapshot in deploy.sh's newest-wins selection.
+cleanup_partial() {
+  if [ ! -f "$DIR/table.json" ] && [ ! -d "$DIR/img" ]; then
+    rmdir "$DIR" 2>/dev/null || true
+  fi
+}
+trap cleanup_partial EXIT
 
 TABLE=$($TF output -raw table_name 2>/dev/null || true)
 REGION=$($TF output -raw region 2>/dev/null || true)
@@ -22,7 +36,7 @@ BUCKET=$($TF output -raw bucket 2>/dev/null || true)
 
 if [ -n "${TABLE:-}" ]; then
   echo "==> exporting table $TABLE"
-  ./scripts/backup.py --table "$TABLE" --region "$REGION" --out "$DIR/table.json"
+  "$PY" ./scripts/backup.py --table "$TABLE" --region "$REGION" --out "$DIR/table.json"
 else
   echo "==> no table in state; skipping export"
 fi

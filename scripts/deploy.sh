@@ -25,17 +25,21 @@ REGION=$($TF output -raw region)
 # restore.py refuses a table that already holds rows, and the pictures are only pushed
 # when the img/ prefix is empty. That makes this safe to run on every deploy rather than
 # something to remember at exactly the wrong moment. SKIP_RESTORE=1 opts out entirely.
-# Only YYYYMMDD-HHMMSS directories are candidates. A plain backups/*/ glob sorts
-# lexically, so any hand-made directory whose name starts with a letter ("rehearsal-…",
-# "keep-…") would sort after every timestamp and silently win — restoring stale data
-# over a fresh teardown. Restricting to [0-9]* makes the name format load-bearing and
-# leaves room for manually-kept snapshots alongside, which deploy will never choose.
-SNAPSHOT=$(ls -d backups/[0-9]*/ 2>/dev/null | sort | tail -1 || true)
+# Newest snapshot that actually holds an export. Two guards, both learned the hard way:
+#   1. Only YYYYMMDD-HHMMSS directories count. A plain backups/*/ glob sorts lexically,
+#      so any letter-prefixed directory ("rehearsal-…", "keep-…") sorts after every
+#      timestamp and silently wins, restoring stale data over a fresh teardown.
+#   2. It must contain table.json. A destroy that aborts mid-export leaves an empty but
+#      timestamped husk which would otherwise outrank the last good snapshot.
+SNAPSHOT=$(ls -d backups/[0-9]*/ 2>/dev/null | sort -r |
+           while read -r d; do [ -f "$d/table.json" ] && { echo "$d"; break; }; done || true)
 if [ -n "${SNAPSHOT:-}" ] && [ -z "${SKIP_RESTORE:-}" ]; then
   echo "==> snapshot found: $SNAPSHOT"
   if [ -f "${SNAPSHOT}table.json" ]; then
     echo "==> restoring table $TABLE"
-    ./scripts/restore.py --table "$TABLE" --region "$REGION" --in "${SNAPSHOT}table.json"
+    # restore.py needs boto3 from the project venv, not the system python.
+    if [ -x .venv/bin/python ]; then PY=.venv/bin/python; else PY=python3; fi
+    "$PY" ./scripts/restore.py --table "$TABLE" --region "$REGION" --in "${SNAPSHOT}table.json"
   fi
   if [ -d "${SNAPSHOT}img" ]; then
     if [ -z "$(aws s3 ls "s3://$BUCKET/img/" 2>/dev/null | head -1)" ]; then
