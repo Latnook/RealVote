@@ -105,6 +105,15 @@ cd backend && TABLE_NAME=lr-local DDB_ENDPOINT=http://localhost:8000 ../.venv/bi
 docker compose up -d dynamodb
 cd backend && ../.venv/bin/pytest -q      # 128 tests against DynamoDB Local
 node scripts/check-crosstab.mjs           # boundary checks for the cross-attribution rule
+node scripts/check-credits.mjs            # credits page rendering, incl. safeHref
+node scripts/check-html-patterns.mjs      # pattern="" attributes must compile under `v`
+```
+
+With the dev server running, this proves it reproduces the CloudFront response headers
+policies, so a CSP violation found (or not found) locally means the same in production:
+
+```bash
+node scripts/check-headers.mjs http://localhost:8080 https://realvote.latnook.com
 ```
 
 ## Adding items and pictures

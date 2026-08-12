@@ -261,7 +261,12 @@ export async function castVote(choice) {
     const { status, body } = await vote(id, choice);
     if (id !== state.current) return; // stale response — state moved on
     if (status === 200) {
-      state.byId.set(id, { ...state.byId.get(id), ...body.item });
+      // Mutate in place rather than replacing the entry: state.items and state.byId
+      // hold the SAME objects (byId is built from items), and a byId.set() with a new
+      // object silently forks them. panels.js reads state.items, so a fork left the
+      // menu showing pre-vote counts — and a blank "הקהל איתך" line on any item whose
+      // total was still zero.
+      Object.assign(state.byId.get(id), body.item);
       state.votes[id] = choice;
       state.queue = state.queue.filter((q) => q !== id);
       state.history.push(id);

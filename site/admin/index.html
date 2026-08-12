@@ -45,7 +45,10 @@
     <section id="panel-items" class="hidden">
       <h2>פריט חדש</h2>
       <form id="create-form">
-        <input id="c-id" placeholder="item-id (a-z, 0-9, -)" pattern="[a-z0-9-]{1,64}">
+        <!-- The dash MUST be escaped: browsers compile `pattern` with the RegExp `v`
+             flag, where a trailing unescaped `-` in a character class is a syntax error.
+             Chrome then discards the attribute and validates nothing, silently. -->
+        <input id="c-id" placeholder="item-id (a-z, 0-9, -)" pattern="[a-z0-9\-]{1,64}">
         <input id="c-name" placeholder="שם בעברית" required>
         <input id="c-emoji" placeholder="אימוג׳י" size="4">
         <select id="c-cat" required aria-label="קטגוריה"></select>

@@ -9,10 +9,13 @@ from app.handler import lambda_handler
 
 SITE_DIR = pathlib.Path(__file__).resolve().parent.parent / "site"
 
-# Mirrors the two CloudFront response headers policies in terraform/cloudfront.tf so a
-# CSP violation shows up here rather than in production. Kept in sync by hand — if you
-# change one of local.csp_site / local.csp_admin, change the twin here too. HSTS is
-# deliberately absent: dev is plain http, where browsers ignore it anyway.
+# Mirrors the CloudFront response headers policies in terraform/cloudfront.tf, one per
+# cache behaviour, so a CSP violation shows up here rather than in production. Kept in
+# sync by hand — change a local.csp_* there and change its twin here. Verify the pair
+# really do match with scripts/check-headers.mjs.
+#
+# HSTS is the one deliberate difference: dev is plain http, where a browser ignores the
+# header anyway, and sending it would pin localhost to https for a year.
 CSP_SITE = (
     "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; "
     "connect-src 'self'; base-uri 'none'; form-action 'none'; "
@@ -23,6 +26,34 @@ CSP_ADMIN = (
     "img-src 'self' data: blob:; connect-src 'self' https:; base-uri 'none'; "
     "form-action 'self'; frame-ancestors 'none'; object-src 'none'"
 )
+# Pictures are served from the same origin as the site, so a directly-opened one would
+# otherwise inherit an origin it has no business in — hence `sandbox`.
+CSP_IMG = (
+    "default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'none'; sandbox"
+)
+
+
+def _headers_for(path):
+    """Which CloudFront behaviour would serve this path, and what it sets."""
+    if path.startswith("/api/"):
+        return [
+            ("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'"),
+            ("X-Content-Type-Options", "nosniff"),
+            ("X-Frame-Options", "DENY"),
+            ("Referrer-Policy", "no-referrer"),
+        ]
+    if path.startswith("/img/"):
+        csp, referrer = CSP_IMG, "no-referrer"
+    elif path.startswith("/admin/"):
+        csp, referrer = CSP_ADMIN, "no-referrer"
+    else:
+        csp, referrer = CSP_SITE, "strict-origin-when-cross-origin"
+    return [
+        ("Content-Security-Policy", csp),
+        ("X-Content-Type-Options", "nosniff"),
+        ("X-Frame-Options", "DENY"),
+        ("Referrer-Policy", referrer),
+    ]
 
 
 class Handler(SimpleHTTPRequestHandler):
@@ -30,15 +61,8 @@ class Handler(SimpleHTTPRequestHandler):
         super().__init__(*args, directory=str(SITE_DIR), **kwargs)
 
     def end_headers(self):
-        path = self.path.split("?")[0]
-        if not path.startswith("/api/"):
-            self.send_header(
-                "Content-Security-Policy",
-                CSP_ADMIN if path.startswith("/admin/") else CSP_SITE,
-            )
-            self.send_header("X-Content-Type-Options", "nosniff")
-            self.send_header("X-Frame-Options", "DENY")
-            self.send_header("Referrer-Policy", "strict-origin-when-cross-origin")
+        for name, value in _headers_for(self.path.split("?")[0]):
+            self.send_header(name, value)
         super().end_headers()
 
     def _api(self):

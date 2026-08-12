@@ -54,3 +54,6 @@ jobs:
 
       - name: Credits page rendering checks
         run: node scripts/check-credits.mjs
+
+      - name: HTML pattern attributes compile under the RegExp v flag
+        run: node scripts/check-html-patterns.mjs
