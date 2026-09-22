@@ -9,6 +9,37 @@ if [ ! -f terraform/realvote.tfvars ]; then
   exit 1
 fi
 
+# Deploy only what CI has seen. The sync publishes the working tree, not a commit, so
+# without this an uncommitted edit or an unpushed commit reaches production untested.
+# DEPLOY_UNCHECKED=1 skips it — for an emergency, when GitHub itself is the problem.
+if [ -z "${DEPLOY_UNCHECKED:-}" ]; then
+  echo "==> checking this commit is committed, pushed and green in CI"
+  # Untracked files count: anything not ignored under site/ gets synced.
+  if [ -n "$(git status --porcelain)" ]; then
+    echo "Uncommitted changes — commit them (so CI tests them) before deploying:" >&2
+    git status --short >&2
+    exit 1
+  fi
+  git fetch --quiet origin main
+  HEAD_SHA=$(git rev-parse HEAD)
+  if [ "$HEAD_SHA" != "$(git rev-parse origin/main)" ]; then
+    echo "HEAD is not origin/main — push main (or check out what is on it) before deploying." >&2
+    exit 1
+  fi
+  if ! command -v gh >/dev/null; then
+    echo "gh (GitHub CLI) is not installed, so CI status cannot be checked." >&2
+    exit 1
+  fi
+  CI=$(gh run list --workflow ci.yml --commit "$HEAD_SHA" --limit 1 \
+         --json status,conclusion --jq '.[0] | "\(.status) \(.conclusion)"')
+  case "$CI" in
+    "completed success") echo "    CI passed on ${HEAD_SHA:0:7}" ;;
+    "")                  echo "No CI run found for ${HEAD_SHA:0:7} yet — wait for it to start." >&2; exit 1 ;;
+    completed*)          echo "CI failed on ${HEAD_SHA:0:7} ($CI) — fix it before deploying." >&2; exit 1 ;;
+    *)                   echo "CI is still running on ${HEAD_SHA:0:7} — wait for it: gh run watch" >&2; exit 1 ;;
+  esac
+fi
+
 echo "==> terraform apply"
 $TF init -backend-config=backend.hcl >/dev/null
 $TF apply -var-file=realvote.tfvars "$@"
