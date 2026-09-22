@@ -22,7 +22,7 @@ jobs:
       AWS_SECRET_ACCESS_KEY: ci
       AWS_DEFAULT_REGION: us-east-1
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Start DynamoDB Local
         run: |
@@ -34,7 +34,7 @@ jobs:
           echo "DynamoDB Local did not come up" >&2
           exit 1
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.13'   # matches terraform/lambda.tf
 
@@ -45,7 +45,7 @@ jobs:
         working-directory: backend
         run: python -m pytest -q
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '22'
 
@@ -67,9 +67,9 @@ jobs:
       run:
         working-directory: terraform
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: hashicorp/setup-terraform@v3
+      - uses: hashicorp/setup-terraform@v4
 
       - name: Formatting
         run: terraform fmt -check -recursive
