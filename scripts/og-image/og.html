@@ -1,0 +1,50 @@
+<!doctype html>
+<!-- Source for site/og.png, the link-preview image. Rendered by scripts/og-image/render.sh.
+     Colours are copied from site/css/theme.css; keep them in step if the theme changes.
+     Key content stays in the central 630px so a square crop (WhatsApp) still reads. -->
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<style>
+  :root {
+    --bg: #23262B; --ink: #F2F3F5; --muted: #8B9099;
+    --right-a: #3730A3; --right-b: #0E7490;
+    --left-a: #B91C1C; --left-b: #C2410C;
+    --font: "Noto Sans Hebrew", "Helvetica Neue", Arial, sans-serif;
+  }
+  html, body { margin: 0; width: 1200px; height: 630px; overflow: hidden; }
+  body {
+    background: var(--bg); color: var(--ink); font-family: var(--font);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    position: relative;
+  }
+  /* The direction rule: ימני = right = blue = →, שמאלני = left = red = ←. */
+  .edge {
+    position: absolute; top: 0; bottom: 0; width: 170px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 10px; font-weight: 800; font-size: 34px;
+  }
+  .edge .arrow { font-size: 64px; line-height: 1; }
+  .edge.right { right: 0; background: linear-gradient(180deg, var(--right-a), var(--right-b)); }
+  .edge.left  { left: 0;  background: linear-gradient(180deg, var(--left-a), var(--left-b)); }
+  .wordmark { font-size: 150px; font-weight: 900; line-height: 1; letter-spacing: 2px; }
+  .dot {
+    background: linear-gradient(90deg, var(--left-a), var(--left-b));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .brand { font-size: 30px; font-weight: 700; letter-spacing: 6px; color: var(--muted); margin-top: 14px; }
+  .rule { width: 520px; border-top: 3px solid var(--ink); margin: 34px 0 30px; }
+  .question { font-size: 58px; font-weight: 800; }
+  .sub { font-size: 30px; color: var(--muted); margin-top: 12px; }
+</style>
+</head>
+<body>
+  <div class="edge right"><span class="arrow">→</span><span>ימני</span></div>
+  <div class="edge left"><span class="arrow">←</span><span>שמאלני</span></div>
+  <div class="wordmark">בעיניי<span class="dot">.</span></div>
+  <div class="brand">RealVote</div>
+  <div class="rule"></div>
+  <div class="question">ימני או שמאלני?</div>
+  <div class="sub">הקהל מכריע. בואו להצביע.</div>
+</body>
+</html>
