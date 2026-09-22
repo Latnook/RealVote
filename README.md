@@ -107,6 +107,7 @@ cd backend && ../.venv/bin/pytest -q      # 134 tests against DynamoDB Local
 node scripts/check-crosstab.mjs           # boundary checks for the cross-attribution rule
 node scripts/check-credits.mjs            # credits page rendering, incl. safeHref
 node scripts/check-html-patterns.mjs      # pattern="" attributes must compile under `v`
+node scripts/check-item-sort.mjs          # admin items-list sort keys, direction and tie order
 ```
 
 With the dev server running, this proves it reproduces the CloudFront response headers

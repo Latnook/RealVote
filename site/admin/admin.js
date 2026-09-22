@@ -1,3 +1,5 @@
+import { sortItems } from "./item-sort.js";
+
 const esc = (s) =>
   String(s)
     .replace(/&/g, "&amp;")
@@ -101,6 +103,18 @@ async function loadQueue() {
 }
 
 /* ---- items ---- */
+// The sort key lives in the <select>, which survives re-renders; direction has no
+// equivalent DOM state, so it lives here.
+let SORT_DIR = "desc";
+
+function syncSortDir() {
+  const btn = $("sort-dir");
+  const desc = SORT_DIR === "desc";
+  btn.textContent = desc ? "\u25bc" : "\u25b2";
+  btn.title = desc ? "\u05d9\u05d5\u05e8\u05d3" : "\u05e2\u05d5\u05dc\u05d4";
+  btn.disabled = $("sort-key").value === "default";
+}
+
 async function loadItems() {
   if (CATEGORIES.length === 0) {
     await loadCategories();
@@ -112,12 +126,13 @@ async function loadItems() {
   const { status, body } = await api("/api/admin/items");
   if (status !== 200) return toast(`שגיאה בטעינת הפריטים (${status})`);
   const showArchived = $("show-archived").checked;
+  const sortKey = $("sort-key").value;
   const items = (body.items || []).filter((i) => showArchived || i.status === "active");
   const byCat = new Map(CATEGORIES.map((c) => [c.slug, []]));
   for (const i of items) (byCat.get(i.category) || byCat.get("other")).push(i);
 
   $("items").innerHTML = CATEGORIES.map((c) => {
-    const rows = byCat.get(c.slug) || [];
+    const rows = sortItems(byCat.get(c.slug) || [], sortKey, SORT_DIR);
     const inner = rows.length
       ? rows.map((i) => itemRowHTML(i)).join("")
       : '<div class="muted empty-cat">אין פריטים בקטגוריה הזו</div>';
@@ -590,6 +605,16 @@ function enterAdmin(idToken) {
   // Wired once, unconditionally: #show-archived exists in the DOM regardless of
   // mode, so both LOCAL and CLOUD boot paths need this listener.
   $("show-archived").addEventListener("change", loadItems);
+  $("sort-key").addEventListener("change", () => {
+    syncSortDir();
+    loadItems();
+  });
+  $("sort-dir").addEventListener("click", () => {
+    SORT_DIR = SORT_DIR === "desc" ? "asc" : "desc";
+    syncSortDir();
+    loadItems();
+  });
+  syncSortDir();
 
   const cfg = await fetch("/admin/config.json").then((r) => (r.ok ? r.json() : null)).catch(() => null);
   if (cfg) {

@@ -25,6 +25,9 @@ form { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; align-items: 
 .empty-cat { padding: 8px 2px; font-style: italic; }
 .row.archived { opacity: 0.45; }
 .inline { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; margin-top: 10px; }
+.items-bar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 12px; }
+.items-bar .inline { margin-top: 0; }
+button:disabled { opacity: 0.4; cursor: default; }
 select { background: var(--surface); color: var(--ink); border: 2px solid var(--ink); padding: 6px; font-family: var(--font); font-size: 13px; }
 .tabs { display: flex; gap: 4px; margin-top: 18px; border-bottom: 2px solid var(--surface); }
 .tab { background: none; color: var(--muted); border: none; border-bottom: 3px solid transparent; margin-bottom: -2px; padding: 8px 12px; font-size: 14px; font-weight: 900; cursor: pointer; }

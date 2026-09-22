@@ -58,8 +58,22 @@
                aria-label="קישור לתמונה">
         <button type="submit">יצירה</button>
       </form>
-      <label class="inline"><input type="checkbox" id="show-archived"> הצג בארכיון</label>
       <h2>פריטים</h2>
+      <div class="items-bar">
+        <label class="inline">מיון:
+          <select id="sort-key" aria-label="מיון פריטים">
+            <option value="default">ברירת מחדל</option>
+            <option value="total">סה״כ</option>
+            <option value="left">שמאלני</option>
+            <option value="right">ימני</option>
+            <option value="neutral">ניטרלי</option>
+          </select>
+        </label>
+        <!-- Label and title are set by syncSortDir(); disabled while the key is
+             "default", which has no meaningful reverse. -->
+        <button type="button" id="sort-dir" class="ghost" aria-label="כיוון המיון"></button>
+        <label class="inline"><input type="checkbox" id="show-archived"> הצג בארכיון</label>
+      </div>
       <div id="items"></div>
     </section>
 
