@@ -427,3 +427,54 @@ def test_patch_item_accepts_generated_image_key(fresh_table):
                                body={"image_key": "img/p5-1786206926.webp"}))
     assert resp["statusCode"] == 200
     assert db.get_item("p5")["image_key"] == "img/p5-1786206926.webp"
+
+
+# A name is what the card shows, so an empty or whitespace-only one would publish
+# a blank card; a non-string would break the page's escaping. All three writers
+# of item names must refuse both, and store a real name trimmed.
+BAD_NAMES = ["", "   ", "\t\n", 123, ["א"], None]
+
+
+def test_create_item_rejects_blank_or_non_string_name(fresh_table):
+    for bad in BAD_NAMES:
+        resp, _ = call(apigw_event("POST", "/api/admin/items", admin=True,
+                                   body={"item_id": "blank", "name": bad}))
+        assert resp["statusCode"] == 400, bad
+    assert db.get_item("blank") is None
+
+
+def test_create_item_trims_name(fresh_table):
+    call(apigw_event("POST", "/api/admin/items", admin=True,
+                     body={"item_id": "sup", "name": "  סאפ בכנרת \n"}))
+    assert db.get_item("sup")["name"] == "סאפ בכנרת"
+
+
+def test_patch_item_rejects_blank_or_non_string_name(fresh_table):
+    db.create_item("a", "א", "🅰️")
+    for bad in BAD_NAMES:
+        resp, _ = call(apigw_event("PATCH", "/api/admin/items/a", admin=True,
+                                   body={"name": bad}))
+        assert resp["statusCode"] == 400, bad
+    assert db.get_item("a")["name"] == "א"
+
+
+def test_patch_item_trims_name(fresh_table):
+    db.create_item("a", "א", "🅰️")
+    call(apigw_event("PATCH", "/api/admin/items/a", admin=True, body={"name": " ב "}))
+    assert db.get_item("a")["name"] == "ב"
+
+
+def test_approve_rejects_blank_or_non_string_name(fresh_table):
+    sid = db.add_suggestion("u1", "משהו")
+    for bad in BAD_NAMES:
+        resp, _ = call(apigw_event("POST", f"/api/admin/suggestions/{sid}/approve", admin=True,
+                                   body={"item_id": "blank", "name": bad}))
+        assert resp["statusCode"] == 400, bad
+    assert db.get_item("blank") is None
+
+
+def test_approve_trims_name(fresh_table):
+    sid = db.add_suggestion("u1", "משהו")
+    call(apigw_event("POST", f"/api/admin/suggestions/{sid}/approve", admin=True,
+                     body={"item_id": "thing", "name": " משהו "}))
+    assert db.get_item("thing")["name"] == "משהו"

@@ -20,6 +20,15 @@ _HTTP_URL = re.compile(r"^https?://", re.I)
 _IMAGE_KEY = re.compile(r"^img/[A-Za-z0-9._-]{1,128}$")
 
 
+def _clean_name(value):
+    """The name trimmed, or None if it is not a string or is blank once trimmed.
+
+    The name is what the card shows, so a blank one would publish an empty card."""
+    if not isinstance(value, str):
+        return None
+    return value.strip() or None
+
+
 def _bad_image_fields(fields):
     """Returns an error code for the first invalid image field, or None if all are fine."""
     source = fields.get("image_source")
@@ -54,7 +63,7 @@ def list_pending(event):
 
 def approve(event, sid):
     body = http.read_json(event) or {}
-    item_id, name = body.get("item_id"), body.get("name")
+    item_id, name = body.get("item_id"), _clean_name(body.get("name"))
     if not (isinstance(item_id, str) and _SLUG.match(item_id) and name):
         return http.response(400, {"error": "bad_request"})
     category = body.get("category", categories.DEFAULT)
@@ -84,7 +93,7 @@ def reject(event, sid):
 
 def create_item(event):
     body = http.read_json(event) or {}
-    item_id, name = body.get("item_id"), body.get("name")
+    item_id, name = body.get("item_id"), _clean_name(body.get("name"))
     if not (isinstance(item_id, str) and _SLUG.match(item_id) and name):
         return http.response(400, {"error": "bad_request"})
     category = body.get("category", categories.DEFAULT)
@@ -121,6 +130,10 @@ def patch_item(event, item_id):
     string_fields = {"name", "emoji", "image_key", "image_source"}
     for field in string_fields:
         if field in fields and not isinstance(fields[field], str):
+            return http.response(400, {"error": "bad_request"})
+    if "name" in fields:
+        fields["name"] = _clean_name(fields["name"])
+        if fields["name"] is None:
             return http.response(400, {"error": "bad_request"})
     bad = _bad_image_fields(fields)
     if bad:
