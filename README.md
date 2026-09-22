@@ -117,6 +117,20 @@ policies, so a CSP violation found (or not found) locally means the same in prod
 node scripts/check-headers.mjs http://localhost:8080 https://realvote.latnook.com
 ```
 
+## Deploying
+
+CI (`.github/workflows/ci.yml`) runs the tests above plus `terraform fmt`/`validate` on every push
+and pull request. It holds no AWS credentials, so deploying stays a deliberate step from the
+maintainer's machine — but `deploy.sh` only ships commits CI has passed:
+
+```bash
+git push origin main                 # triggers CI
+gh run watch                         # wait for it to go green
+./scripts/deploy.sh -auto-approve    # refuses unless the tree is clean, HEAD is origin/main, and CI passed
+```
+
+`DEPLOY_UNCHECKED=1` skips the check, for an emergency when GitHub itself is the problem.
+
 ## Adding items and pictures
 
 Items live in DynamoDB and are managed from `/admin/`. `backend/seed.py` seeds a local table
